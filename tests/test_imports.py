@@ -1,0 +1,28 @@
+def test_import_core_packages_importable():
+    import cli.main  # noqa: F401
+    import core.graph  # noqa: F401
+    import storage.event_store  # noqa: F401
+    import schemas.events  # noqa: F401
+    import schemas.plan  # noqa: F401
+    import schemas.rules  # noqa: F401
+    import schemas.checkpoint  # noqa: F401
+    import agents.planner_agent  # noqa: F401
+    import agents.reviewer_agent  # noqa: F401
+    import agents.executor_agent  # noqa: F401
+    import tools.file_scanner  # noqa: F401
+    import tools.rule_engine  # noqa: F401
+    import tools.embeddings  # noqa: F401
+    import tools.clustering  # noqa: F401
+    import tools.tree_shaper  # noqa: F401
+    import tools.conflict_resolver  # noqa: F401
+    import tools.checkpoint  # noqa: F401
+    import tools.dev_clean  # noqa: F401
+    import projections.plan_view  # noqa: F401
+    import projections.file_index  # noqa: F401
+    import projections.embed_cache  # noqa: F401
+    import projections.checkpoint_log  # noqa: F401
+    import os_win.paths  # noqa: F401
+    import os_win.reparse_points  # noqa: F401
+    import os_win.recycle_bin  # noqa: F401
+    import os_win.onedrive  # noqa: F401
+
