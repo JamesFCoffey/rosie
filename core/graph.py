@@ -21,7 +21,8 @@ except Exception:  # pragma: no cover - fallback when structlog is unavailable
 
     logger = logging.getLogger(__name__)
 
-from projections.plan_view import PlanItem, PlanView
+from projections.plan_view import PlanItem, PlanView, PlanProjection
+from projections.base import replay
 from schemas import events as ev
 from storage.event_store import EventStore
 from tools import dev_clean as dev_clean_tool
@@ -105,6 +106,9 @@ class Orchestrator:
         self._stop = asyncio.Event()
         # Default: no rules; tests/CLI can inject via set_rules
         self._rules = None
+        # Plan projection state: keep a rolling materialized view and cursor
+        self._plan = PlanProjection()
+        self._plan_last_id = 0
 
     # -----------------------------
     # Public configuration helpers
@@ -254,6 +258,8 @@ class Orchestrator:
             self._state.dirty_paths.clear()
             self._state.full_invalidate = False
             self._state.last_event_id = new_events[-1].id
+            # Update the Plan projection based on newly appended events
+            self._plan_last_id = replay(self._plan, self.events, since_id=self._plan_last_id)
 
     async def run_forever(self, *, poll_interval_s: float = 0.2) -> None:
         """Continuously process events until ``stop()`` is called."""
@@ -297,19 +303,27 @@ class Orchestrator:
         if not to_eval and not self._state.full_invalidate:
             return
         # Execute rule engine over the chosen subset
-        evaluated_count = 0
+        evaluated_set: Set[Path] = set(to_eval if to_eval else self._state.paths)
+        evaluated_count = len(evaluated_set)
         if self._rules is not None:
-            matches = rule_engine.match_rules(to_eval if to_eval else self._state.paths, self._rules)
+            matches = rule_engine.match_rules(evaluated_set, self._rules)
         else:
             # In tests, ruleset may be attached only via JSON; skip computation.
-            matches = {p: "<unknown>" for p in (to_eval if to_eval else self._state.paths)}
-        for p in (to_eval if to_eval else self._state.paths):
-            evaluated_count += 1
+            matches = {p: "<unknown>" for p in evaluated_set}
+        # Update in-memory state (both additions and removals within evaluated subset)
+        for p in evaluated_set:
             if p in matches:
                 self._state.rule_matches[p] = matches[p]
             else:
-                # Remove stale match if no longer matching
                 self._state.rule_matches.pop(p, None)
+        # Emit RuleMatched events for the currently matched subset to feed PlanProjection
+        # Emitting only for evaluated_set keeps deterministic scope
+        for p, rid in matches.items():
+            try:
+                self.events.append(ev.RuleMatched(path=p, rule_id=rid))
+            except Exception:
+                # Best-effort emission; keep pipeline deterministic regardless
+                continue
         self._state.runs.rule_runs += 1
         self._state.runs.rule_paths_evaluated = evaluated_count
 
@@ -366,3 +380,11 @@ class Orchestrator:
     @property
     def run_stats(self) -> NodeRunStats:
         return self._state.runs
+
+    # Expose current plan id for tests/CLI
+    @property
+    def current_plan_id(self) -> Optional[str]:
+        try:
+            return self._plan.current_plan().id
+        except Exception:
+            return None
