@@ -9,7 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class _JsonMixin(BaseModel):
@@ -50,6 +50,25 @@ class EmbeddingsComputed(_JsonMixin):
 class ClustersFormed(_JsonMixin):
     type: str = "ClustersFormed"
     count: int
+    # Optional per-item assignments for downstream projections
+    # Each item may carry an optional cluster label; items with cluster_id = -1 are noise.
+    items: Optional[List["ClusterAssignment"]] = None
+
+
+class ClusterAssignment(_JsonMixin):
+    """Cluster assignment payload for ``ClustersFormed`` events.
+
+    Attributes:
+        path: Source file path.
+        cluster_id: Cluster numeric id; ``-1`` denotes noise/outlier.
+        confidence: Membership confidence in [0, 1].
+        label: Optional human-friendly label for the cluster.
+    """
+
+    path: Path
+    cluster_id: int
+    confidence: float = Field(ge=0.0, le=1.0)
+    label: Optional[str] = None
 
 
 class PlanProposed(_JsonMixin):

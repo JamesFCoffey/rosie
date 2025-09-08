@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 
 from schemas.plan import PlanItemModel, PlanModel
 from storage.event_store import EventRecord, compute_checksum
+from tools.tree_shaper import shape_cluster_moves
 
 
 class PlanItem(BaseModel):
@@ -42,13 +43,21 @@ class PlanProjection:
 
     items: Dict[str, PlanItemModel] = field(default_factory=dict)
     correction_gen: int = 0
+    root: Path | None = None
 
     def apply(self, event: EventRecord) -> None:
         """Apply a single event to update the plan state."""
         et = event.type
         data = event.data
 
-        if et == "RuleMatched":
+        if et == "FilesScanned":
+            # Track root for destination planning.
+            try:
+                self.root = Path(data.get("root")) if data.get("root") else None
+            except Exception:
+                self.root = None
+
+        elif et == "RuleMatched":
             # Deterministic item construction from event payload only.
             path = Path(data["path"])  # Pydantic serializes Path -> str
             rule_id = str(data["rule_id"])  # stable str
@@ -68,7 +77,65 @@ class PlanProjection:
             # No item-id scoping provided in current schema; bump generation.
             self.correction_gen += 1
 
-        # ClustersFormed and others are ignored by this projection for v0.1.
+        elif et == "ClustersFormed":
+            # Merge clusters into create/move actions if assignments are provided.
+            items = data.get("items") or []
+            if not items or self.root is None:
+                return
+            # Group by cluster id, skip noise (-1)
+            buckets: Dict[int, List[tuple[Path, float, str | None]]] = {}
+            labels: Dict[int, str] = {}
+            for it in items:
+                cid = int(it.get("cluster_id", -1))
+                if cid == -1:
+                    continue
+                try:
+                    p = Path(it.get("path"))
+                    conf = float(it.get("confidence", 0.5))
+                    lbl = it.get("label")
+                except Exception:
+                    continue
+                buckets.setdefault(cid, []).append((p, conf, lbl))
+                if cid not in labels and lbl:
+                    labels[cid] = str(lbl)
+
+            # Create deterministic actions per cluster
+            for cid in sorted(buckets.keys()):
+                members = [p for (p, _c, _l) in buckets[cid]]
+                # Fallback label if none provided
+                label = labels.get(cid) or f"cluster-{cid}"
+                dirs, moves = shape_cluster_moves(
+                    root=self.root, label=label, members=members, max_depth=2, max_children=None
+                )
+                # Create directories (explicit create actions)
+                for d in sorted(set(dirs)):
+                    reason = f"cluster:{label}"
+                    action = "create_dir"
+                    item_id = self._compute_item_id(action=action, target=d, reason=reason)
+                    self.items[item_id] = PlanItemModel(
+                        id=item_id,
+                        action=action,
+                        target=d,
+                        reason=reason,
+                        confidence=0.6,
+                    )
+                # Moves for members
+                # Average confidence for cluster used only for moves lacking explicit conf
+                avg_conf = (
+                    sum(c for (_p, c, _l) in buckets[cid]) / max(1, len(buckets[cid]))
+                )
+                for src, dst in moves:
+                    reason = f"cluster:{label} from {src.name}"
+                    action = "move"
+                    conf = next((c for (p, c, _l) in buckets[cid] if p == src), avg_conf)
+                    item_id = self._compute_item_id(action=action, target=dst, reason=reason)
+                    self.items[item_id] = PlanItemModel(
+                        id=item_id,
+                        action=action,
+                        target=dst,
+                        reason=reason,
+                        confidence=max(0.0, min(1.0, float(conf))),
+                    )
 
     def current_plan(self) -> PlanModel:
         """Return the current deterministic plan with a stable id."""
