@@ -21,6 +21,8 @@ from rich.console import Console
 from rich.table import Table
 
 from core.graph import Orchestrator
+from agents.planner_agent import PlannerAgent
+from projections.plan_view import PlanProjection
 from projections.base import replay
 from projections.file_index import FileIndex
 
@@ -59,7 +61,8 @@ def scan(
     orchestrator = Orchestrator(db_path=db or default_db_path())
 
     console.log("Starting scan (dry-run)…")
-    plan_view = orchestrator.scan_and_plan(
+    # First, perform a filesystem scan and emit FilesScanned batches
+    _scan_view = orchestrator.scan_and_plan(
         root=path,
         rules_path=rules,
         semantic=semantic,
@@ -68,15 +71,22 @@ def scan(
         include=include,
         exclude=exclude,
     )
+    # Then, run the planner over emitted events
+    planner = PlannerAgent(orchestrator.events)
+    planner.propose_plan(root=path, semantic=semantic, rules_path=rules)
 
-    # Minimal tabular summary (placeholder)
-    table = Table(title="Proposed Plan (dry-run)")
+    # Materialize the current deterministic plan for display/export
+    proj = PlanProjection()
+    replay(proj, orchestrator.events)
+    plan = proj.current_plan()
+
+    table = Table(title=f"Proposed Plan (dry-run) — id {plan.id}")
     table.add_column("Action ID")
     table.add_column("Action")
     table.add_column("Target")
     table.add_column("Reason")
     table.add_column("Confidence")
-    for item in plan_view.items:
+    for item in plan.items:
         table.add_row(item.id, item.action, str(item.target), item.reason, f"{item.confidence:.2f}")
     console.print(table)
 
@@ -94,7 +104,7 @@ def scan(
 
     if out:
         out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(json.dumps(plan_view.model_dump(mode="json"), indent=2))
+        out.write_text(json.dumps(plan.model_dump(mode="json"), indent=2))
         console.log(f"Wrote plan JSON to {out}")
 
 
