@@ -21,6 +21,8 @@ from rich.console import Console
 from rich.table import Table
 
 from core.graph import Orchestrator
+from projections.base import replay
+from projections.file_index import FileIndex
 
 app = typer.Typer(add_completion=False, help="Rosie — local-first cleanup maid (dry-run by default)")
 console = Console()
@@ -47,6 +49,7 @@ def scan(
     include: Optional[str] = typer.Option(None, "--include", help="Comma-separated globs to include"),
     exclude: Optional[str] = typer.Option(None, "--exclude", help="Comma-separated globs to exclude"),
     out: Optional[Path] = typer.Option(None, "--out", help="Write plan JSON to file"),
+    limit: int = typer.Option(20, "--limit", min=1, help="Summary limit for display"),
     db: Optional[Path] = typer.Option(None, "--db", help="Path to event store DB"),
 ):
     """Scan path and produce a dry-run plan.
@@ -66,7 +69,7 @@ def scan(
         exclude=exclude,
     )
 
-    # Minimal tabular summary
+    # Minimal tabular summary (placeholder)
     table = Table(title="Proposed Plan (dry-run)")
     table.add_column("Action ID")
     table.add_column("Action")
@@ -76,6 +79,18 @@ def scan(
     for item in plan_view.items:
         table.add_row(item.id, item.action, str(item.target), item.reason, f"{item.confidence:.2f}")
     console.print(table)
+
+    # Largest folders preview (if scan emitted batched metadata)
+    idx = FileIndex()
+    replay(idx, orchestrator.events)
+    top = idx.largest_folders(limit=limit)
+    if top:
+        folders = Table(title=f"Largest Folders (top {limit})")
+        folders.add_column("Folder")
+        folders.add_column("Size (MB)", justify="right")
+        for path, size in top:
+            folders.add_row(str(path), f"{size / (1024*1024):.2f}")
+        console.print(folders)
 
     if out:
         out.parent.mkdir(parents=True, exist_ok=True)
@@ -148,4 +163,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     sys.exit(main())
-

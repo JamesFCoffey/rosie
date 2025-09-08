@@ -139,21 +139,37 @@ class Orchestrator:
         Returns a minimal plan with no mutating actions (safe preview).
         """
         root = root.resolve()
-        files = list(self._safe_scan(root=root, include=include, exclude=exclude))
-
-        # Record an event for the scan to keep the event log meaningful.
+        # Use the async scanner to emit batched FilesScanned events with metadata.
+        patterns_include = [p.strip() for p in include.split(",") if p.strip()] if include else []
+        patterns_exclude = [p.strip() for p in exclude.split(",") if p.strip()] if exclude else []
         try:
-            self.events.append(ev.FilesScanned(root=root, count=len(files)))
-        except Exception:
-            # Best-effort: CLI should not fail due to event store unavailability here.
-            logger.warning("files_scanned_event_append_failed", root=str(root))
+            import asyncio as _asyncio
+
+            total = _asyncio.run(
+                file_scanner.scan_and_emit(
+                    root=root,
+                    store=self.events,
+                    include=patterns_include,
+                    exclude=patterns_exclude,
+                    batch_size=512,
+                )
+            )
+        except RuntimeError:
+            # If an event loop is already running (e.g., from an embedding server),
+            # fall back to a synchronous compatibility scan for count only.
+            files = list(self._safe_scan(root=root, include=include, exclude=exclude))
+            total = len(files)
+            try:
+                self.events.append(ev.FilesScanned(root=root, count=total))
+            except Exception:
+                logger.warning("files_scanned_event_append_failed", root=str(root))
 
         # Create a single informational item summarizing the scan.
         item = PlanItem(
             id="scan-summary",
             action="info",
             target=root,
-            reason=f"Scanned {len(files)} items under {root}",
+            reason=f"Scanned {total} items under {root}",
             confidence=1.0,
         )
         return PlanView(items=[item])

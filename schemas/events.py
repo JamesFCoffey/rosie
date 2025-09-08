@@ -32,6 +32,8 @@ class FilesScanned(_JsonMixin):
     type: str = "FilesScanned"
     root: Path
     count: int
+    # Optional batch payload for detailed scanning; backward-compatible
+    batch: Optional[List[dict]] = None
 
 
 class RuleMatched(_JsonMixin):

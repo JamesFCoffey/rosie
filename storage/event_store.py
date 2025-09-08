@@ -56,7 +56,10 @@ class EventStore:
         self._db_path = Path(db_path)
         if self._db_path.parent and not self._db_path.parent.exists():
             self._db_path.parent.mkdir(parents=True, exist_ok=True)
-        self._conn = sqlite3.connect(str(self._db_path))
+        # Allow usage from worker threads (e.g., async scanner producer).
+        # SQLite serializes access internally; higher-level coordination is
+        # performed by callers. This keeps emission simple for batch scanners.
+        self._conn = sqlite3.connect(str(self._db_path), check_same_thread=False)
         self._conn.execute("PRAGMA journal_mode=WAL;")
         self._conn.execute("PRAGMA synchronous=NORMAL;")
         self._conn.execute(
