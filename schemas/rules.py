@@ -19,8 +19,20 @@ class _JsonMixin(BaseModel):
 class Rule(_JsonMixin):
     id: str
     name: str
+    # Legacy include/exclude (globs)
     include: List[str] = Field(default_factory=list)
     exclude: List[str] = Field(default_factory=list)
+    # New matching fields
+    paths: List[str] = Field(default_factory=list)
+    globs: List[str] = Field(default_factory=list)
+    exts: List[str] = Field(default_factory=list)
+    allow: List[str] = Field(default_factory=list)
+    deny: List[str] = Field(default_factory=list)
+    # Optional size/age constraints
+    min_size: Optional[int] = None
+    max_size: Optional[int] = None
+    min_age_days: Optional[float] = None
+    max_age_days: Optional[float] = None
     action: str = "info"
     reason: Optional[str] = None
 
