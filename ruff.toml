@@ -1,16 +1,20 @@
 line-length = 100
 target-version = "py311"
-select = [
-  "E",   # pycodestyle errors
-  "F",   # pyflakes
-  "I",   # isort
-  "UP",  # pyupgrade
-  "N",   # pep8-naming
-]
-ignore = [
-]
 
-[format]
-quote-style = "double"
-indent-style = "space"
+# Use the new `[lint]` table (Ruff >=0.5) to avoid deprecation warnings.
+[lint]
+# Lint rule sets:
+# - E: pycodestyle (whitespace, etc.)
+# - F: pyflakes (undefined names, unused vars)
+# - I: import sorting (isort-compatible via Ruff)
+# - UP: pyupgrade (modernize syntax to 3.11; e.g., list[int], A | B)
+# - N: pep8-naming (consistent naming)
+select = ["E", "F", "I", "UP", "N"]
 
+# Keep Ruff compatible with Black to avoid formatter “ping-pong”.
+# - E203 conflicts with Black’s slice spacing.
+# - E501 (line length) is enforced by Black; avoid double-enforcement.
+# Note: Ruff does not implement W503; do not list it here.
+ignore = ["E203", "E501"]
+
+# Do not enable Ruff's formatter; Black owns formatting.
