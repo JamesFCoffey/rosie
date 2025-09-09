@@ -7,13 +7,14 @@ return destinations for move operations alongside directories to create.
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Sequence
 from pathlib import Path
-from typing import Iterable, List, Sequence, Tuple, TypeVar
+from typing import TypeVar
 
 T = TypeVar("T")
 
 
-def prune(items: Iterable[T], *, max_depth: int | None, max_children: int | None) -> List[T]:
+def prune(items: Iterable[T], *, max_depth: int | None, max_children: int | None) -> list[T]:
     """Prune a flat collection to respect ``max_children``.
 
     This is a minimal helper used in a few places where only a flat limit is
@@ -39,7 +40,7 @@ def shape_cluster_moves(
     members: Sequence[Path],
     max_depth: int | None = 2,
     max_children: int | None = None,
-) -> Tuple[List[Path], List[Tuple[Path, Path]]]:
+) -> tuple[list[Path], list[tuple[Path, Path]]]:
     """Compute directories to create and move destinations for a cluster.
 
     Args:
@@ -70,10 +71,10 @@ def shape_cluster_moves(
 
     # Split into evenly sized parts under base to satisfy child limit
     per = max(1, int(max_children))
-    dirs: List[Path] = [base]
-    moves: List[Tuple[Path, Path]] = []
+    dirs: list[Path] = [base]
+    moves: list[tuple[Path, Path]] = []
     part = 1
-    chunk: List[Path] = []
+    chunk: list[Path] = []
     for p in m:
         chunk.append(p)
         if len(chunk) == per:

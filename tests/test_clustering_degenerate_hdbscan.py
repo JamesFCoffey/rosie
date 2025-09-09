@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List
 
 import tools.clustering as cl
 
@@ -16,7 +15,7 @@ def test_fallback_when_hdbscan_all_noise(monkeypatch, tmp_path: Path) -> None:
 
     # Two near-identical vectors and one far; fallback should group the pair
     a, b, c = Path("a.txt"), Path("b.txt"), Path("c.bin")
-    v: List[List[float]] = [
+    v: list[list[float]] = [
         [1.0, 0.0, 0.0],
         [0.98, 0.0, 0.0],
         [0.0, 1.0, 0.0],

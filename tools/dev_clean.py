@@ -11,12 +11,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, List, Dict, Set
-
 
 # Canonical cache directory patterns; paths are matched via Path.rglob and can
 # include simple subpath globs like ".next/cache".
-DEV_CACHE_DIRS: List[str] = [
+DEV_CACHE_DIRS: list[str] = [
     "node_modules",
     ".venv",
     "__pycache__",
@@ -32,7 +30,7 @@ DEV_CACHE_DIRS: List[str] = [
 ]
 
 # Preset mapping to subsets. Presets are conservative; "all" is the union.
-PRESETS: Dict[str, List[str]] = {
+PRESETS: dict[str, list[str]] = {
     "all": DEV_CACHE_DIRS,
     "node": [
         "node_modules",
@@ -65,7 +63,7 @@ class DevCacheFinding:
     size_mb: float
 
 
-def find_dev_caches(root: Path, *, preset: str = "all") -> List[DevCacheFinding]:
+def find_dev_caches(root: Path, *, preset: str = "all") -> list[DevCacheFinding]:
     """Find dev cache directories under ``root``.
 
     Args:
@@ -76,8 +74,8 @@ def find_dev_caches(root: Path, *, preset: str = "all") -> List[DevCacheFinding]
         List of findings with resolved paths and sizes in MB.
     """
     root = root.resolve()
-    seen: Set[Path] = set()
-    results: List[DevCacheFinding] = []
+    seen: set[Path] = set()
+    results: list[DevCacheFinding] = []
     patterns = PRESETS.get(preset.lower(), DEV_CACHE_DIRS)
     for pat in patterns:
         for p in root.rglob(pat):

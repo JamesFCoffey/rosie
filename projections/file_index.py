@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, Optional, Tuple
+from typing import Optional
 
 from storage.event_store import EventRecord
 
@@ -27,9 +27,9 @@ class FileMeta:
 class FileIndex:
     """Materialized view for file metadata and folder aggregates."""
 
-    root: Optional[Path] = None
-    entries: Dict[Path, FileMeta] = field(default_factory=dict)
-    folder_sizes: Dict[Path, int] = field(default_factory=dict)
+    root: Path | None = None
+    entries: dict[Path, FileMeta] = field(default_factory=dict)
+    folder_sizes: dict[Path, int] = field(default_factory=dict)
 
     def apply(self, event: EventRecord) -> None:
         """Apply a single event to update the index.
@@ -69,7 +69,12 @@ class FileIndex:
         elif et == "RuleMatched":
             p = Path(data["path"])  # serialized by pydantic as string
             if p not in self.entries:
-                self.entries[p] = FileMeta(path=p, size=cast(Optional[int], 0), mtime=cast(Optional[float], 0.0), is_dir=p.is_dir())
+                self.entries[p] = FileMeta(
+                    path=p,
+                    size=cast(Optional[int], 0),
+                    mtime=cast(Optional[float], 0.0),
+                    is_dir=p.is_dir(),
+                )
 
     def _bump_folder_sizes(self, start: Path, delta: int) -> None:
         """Increment folder sizes by ``delta`` up to (and including) root.
@@ -89,7 +94,7 @@ class FileIndex:
                 break
             cur = cur.parent
 
-    def largest_folders(self, *, limit: int = 20) -> List[Tuple[Path, int]]:
+    def largest_folders(self, *, limit: int = 20) -> List[tuple[Path, int]]:
         """Return top-N folders by aggregated size.
 
         Args:

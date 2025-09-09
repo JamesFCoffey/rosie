@@ -13,7 +13,6 @@ from __future__ import annotations
 import json
 import time
 from pathlib import Path
-from typing import Iterable, List
 
 from schemas.checkpoint import Checkpoint, CheckpointAction
 
@@ -84,7 +83,7 @@ def append_action(path: Path, action: CheckpointAction) -> None:
     p = Path(path)
     if p.exists():
         ck = read_checkpoint(p)
-        actions: List[CheckpointAction] = list(ck.actions)
+        actions: list[CheckpointAction] = list(ck.actions)
     else:
         ck = Checkpoint(path=p, actions=[])
         actions = []

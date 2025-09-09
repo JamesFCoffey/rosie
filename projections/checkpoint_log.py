@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Optional
 
 from storage.event_store import EventRecord
 
@@ -18,16 +17,16 @@ from storage.event_store import EventRecord
 class AppliedAction:
     item_id: str
     status: str
-    message: Optional[str]
+    message: str | None
 
 
 @dataclass
 class CheckpointLog:
     """Materialized view for checkpoint/undo information."""
 
-    current_plan_id: Optional[str] = None
-    actions: List[AppliedAction] = field(default_factory=list)
-    last_checkpoint_path: Optional[Path] = None
+    current_plan_id: str | None = None
+    actions: list[AppliedAction] = field(default_factory=list)
+    last_checkpoint_path: Path | None = None
 
     def apply(self, event: EventRecord) -> None:
         et = event.type

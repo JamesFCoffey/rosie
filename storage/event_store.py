@@ -8,9 +8,10 @@ from __future__ import annotations
 import json
 import sqlite3
 import time
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable, List, Mapping, Optional, Sequence
+from typing import Any
 
 try:  # Prefer blake3 if available
     from blake3 import blake3 as _blake3
@@ -63,16 +64,14 @@ class EventStore:
         self._conn.execute("PRAGMA journal_mode=WAL;")
         self._conn.execute("PRAGMA synchronous=NORMAL;")
         self._conn.execute(
-            (
-                "CREATE TABLE IF NOT EXISTS events (\n"
-                "  id INTEGER PRIMARY KEY AUTOINCREMENT,\n"
-                "  ts INTEGER NOT NULL,\n"
-                "  type TEXT NOT NULL,\n"
-                "  data BLOB NOT NULL,\n"
-                "  checksum TEXT NOT NULL,\n"
-                "  schema_ver INTEGER NOT NULL\n"
-                ")"
-            )
+            "CREATE TABLE IF NOT EXISTS events (\n"
+            "  id INTEGER PRIMARY KEY AUTOINCREMENT,\n"
+            "  ts INTEGER NOT NULL,\n"
+            "  type TEXT NOT NULL,\n"
+            "  data BLOB NOT NULL,\n"
+            "  checksum TEXT NOT NULL,\n"
+            "  schema_ver INTEGER NOT NULL\n"
+            ")"
         )
         self._conn.commit()
 
@@ -121,14 +120,14 @@ class EventStore:
         self._conn.commit()
         return int(cur.lastrowid)
 
-    def read_since(self, last_id: int) -> List[EventRecord]:
+    def read_since(self, last_id: int) -> list[EventRecord]:
         """Read events with id greater than the provided value."""
         cur = self._conn.execute(
             "SELECT id, ts, type, data, checksum, schema_ver FROM events WHERE id > ? ORDER BY id ASC",
             (last_id,),
         )
         rows = cur.fetchall()
-        out: List[EventRecord] = []
+        out: list[EventRecord] = []
         for r in rows:
             data_dict = json.loads(r[3])
             out.append(
@@ -143,7 +142,7 @@ class EventStore:
             )
         return out
 
-    def read_all(self) -> List[EventRecord]:
+    def read_all(self) -> list[EventRecord]:
         """Read all events in id order."""
         return self.read_since(0)
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
-from typing import List, Sequence
 
 from projections.embed_cache import EmbeddingCache
 from storage.event_store import EventStore
@@ -18,7 +18,7 @@ class MockProvider:
         self.calls: int = 0
         self.last_texts: Sequence[str] | None = None
 
-    def embed(self, texts: Sequence[str]) -> List[List[float]]:
+    def embed(self, texts: Sequence[str]) -> list[list[float]]:
         self.calls += 1
         self.last_texts = list(texts)
         return [[0.5] * self.dim for _ in texts]

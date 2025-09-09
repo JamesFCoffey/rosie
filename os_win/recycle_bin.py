@@ -11,7 +11,6 @@ This module performs no network access and avoids any global side effects.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 
 def _is_windows() -> bool:

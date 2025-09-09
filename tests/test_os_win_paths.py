@@ -3,8 +3,6 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-import pytest
-
 from os_win.paths import get_known_folder, to_long_path
 
 

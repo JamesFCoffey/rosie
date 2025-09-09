@@ -11,16 +11,16 @@ from __future__ import annotations
 
 import math
 from collections import defaultdict
+from collections.abc import Iterable, MutableMapping, Sequence
 from pathlib import Path
-from typing import Dict, Iterable, List, Mapping, MutableMapping, Sequence, Tuple
 
 from schemas import events as ev
 from storage.event_store import EventStore
 from tools.embeddings import _split_tokens
 
 
-def cluster_by_extension(paths: Iterable[Path]) -> Dict[str, List[Path]]:
-    groups: Dict[str, List[Path]] = {}
+def cluster_by_extension(paths: Iterable[Path]) -> dict[str, list[Path]]:
+    groups: dict[str, list[Path]] = {}
     for p in paths:
         ext = p.suffix.lower() or "<none>"
         groups.setdefault(ext, []).append(p)
@@ -31,11 +31,14 @@ def cluster_by_extension(paths: Iterable[Path]) -> Dict[str, List[Path]]:
 # TF-IDF labeling helpers
 # -----------------------
 
-def _tokenize_texts(texts: Sequence[str]) -> List[List[str]]:
+
+def _tokenize_texts(texts: Sequence[str]) -> list[list[str]]:
     return [[t for t in _split_tokens(txt)] for txt in texts]
 
 
-def _tf_idf_labels(texts: Sequence[str], assignments: Sequence[int], *, top_k: int = 1) -> Dict[int, str]:
+def _tf_idf_labels(
+    texts: Sequence[str], assignments: Sequence[int], *, top_k: int = 1
+) -> dict[int, str]:
     """Compute simple TF‑IDF labels per cluster.
 
     Args:
@@ -55,19 +58,19 @@ def _tf_idf_labels(texts: Sequence[str], assignments: Sequence[int], *, top_k: i
             df[tok] += 1
 
     # Accumulate TF-IDF per cluster
-    scores: Dict[int, Dict[str, float]] = defaultdict(lambda: defaultdict(float))
+    scores: dict[int, dict[str, float]] = defaultdict(lambda: defaultdict(float))
     for toks, cid in zip(tokens_per_doc, assignments):
         if cid == -1:
             continue
         # Term freq for this document
-        tf: Dict[str, int] = defaultdict(int)
+        tf: dict[str, int] = defaultdict(int)
         for t in toks:
             tf[t] += 1
         for t, f in tf.items():
             idf = math.log((n_docs + 1) / (df.get(t, 0) + 1)) + 1.0  # smooth
             scores[cid][t] += float(f) * idf
 
-    labels: Dict[int, str] = {}
+    labels: dict[int, str] = {}
     for cid, per_tok in scores.items():
         if not per_tok:
             continue
@@ -80,6 +83,7 @@ def _tf_idf_labels(texts: Sequence[str], assignments: Sequence[int], *, top_k: i
 # -------------------
 # Clustering backends
 # -------------------
+
 
 def _try_hdbscan(vectors: Sequence[Sequence[float]], *, min_cluster_size: int = 3):
     try:
@@ -150,6 +154,7 @@ def _fallback_threshold(vectors: Sequence[Sequence[float]], *, sim_threshold: fl
 # Public, batchable clustering
 # -----------------------------
 
+
 def cluster_vectors(
     *,
     paths: Sequence[Path],
@@ -157,7 +162,7 @@ def cluster_vectors(
     store: EventStore | None = None,
     texts: Sequence[str] | None = None,
     min_cluster_size: int = 3,
-) -> List[ev.ClusterAssignment]:
+) -> list[ev.ClusterAssignment]:
     """Cluster vectors and optionally emit a ``ClustersFormed`` event.
 
     Args:
@@ -187,7 +192,7 @@ def cluster_vectors(
     labels, probs = result
 
     # Basic labeling
-    lbl_map: Dict[int, str] = {}
+    lbl_map: dict[int, str] = {}
     if texts is None:
         texts = [p.stem for p in paths]
     try:
@@ -195,9 +200,13 @@ def cluster_vectors(
     except Exception:
         lbl_map = {}
 
-    items: List[ev.ClusterAssignment] = []
+    items: list[ev.ClusterAssignment] = []
     for p, cid, pr in zip(paths, labels, probs):
-        items.append(ev.ClusterAssignment(path=Path(p), cluster_id=int(cid), confidence=float(pr), label=lbl_map.get(int(cid))))
+        items.append(
+            ev.ClusterAssignment(
+                path=Path(p), cluster_id=int(cid), confidence=float(pr), label=lbl_map.get(int(cid))
+            )
+        )
 
     if store is not None:
         try:

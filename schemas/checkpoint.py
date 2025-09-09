@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List
 
 from pydantic import BaseModel
 
@@ -26,4 +25,4 @@ class CheckpointAction(_JsonMixin):
 
 class Checkpoint(_JsonMixin):
     path: Path
-    actions: List[CheckpointAction]
+    actions: list[CheckpointAction]

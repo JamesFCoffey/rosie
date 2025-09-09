@@ -8,11 +8,10 @@ cache-by-content-hash semantics, and emit ``EmbeddingsComputed`` events.
 
 from __future__ import annotations
 
-import io
-import os
 import re
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Iterable, List, Protocol, Sequence, Tuple
+from typing import Protocol
 
 try:
     from blake3 import blake3 as _blake3  # type: ignore
@@ -38,7 +37,7 @@ class EmbedProvider(Protocol):
     external side effects and must not perform network access.
     """
 
-    def embed(self, texts: Sequence[str]) -> List[List[float]]:
+    def embed(self, texts: Sequence[str]) -> list[list[float]]:
         """Return one vector per input text."""
 
 
@@ -53,13 +52,13 @@ class FallbackProvider:
     def __init__(self, dim: int = 64) -> None:
         self.dim = int(dim)
 
-    def embed(self, texts: Sequence[str]) -> List[List[float]]:  # noqa: D401
+    def embed(self, texts: Sequence[str]) -> list[list[float]]:  # noqa: D401
         return [_hash_text_to_floats(t, self.dim) for t in texts]
 
 
-def _hash_text_to_floats(text: str, dim: int) -> List[float]:
+def _hash_text_to_floats(text: str, dim: int) -> list[float]:
     """Map ``text`` deterministically to ``dim`` floats in [0, 1]."""
-    out: List[float] = []
+    out: list[float] = []
     # Normalize whitespace for stability
     t = " ".join(text.split())
     for i in range(dim):
@@ -74,10 +73,10 @@ _CAMEL_RE = re.compile(r"(?<!^)(?=[A-Z])")
 _NON_ALNUM_RE = re.compile(r"[^A-Za-z0-9]+")
 
 
-def _split_tokens(name: str) -> List[str]:
+def _split_tokens(name: str) -> list[str]:
     """Split a filename into lowercased tokens (underscores/dashes/camelCase)."""
     base = _NON_ALNUM_RE.sub(" ", name)
-    parts: List[str] = []
+    parts: list[str] = []
     for frag in base.split():
         parts.extend(_CAMEL_RE.sub(" ", frag).split())
     return [p.lower() for p in parts if p]
@@ -127,7 +126,7 @@ def _file_content_hash(path: Path, *, chunk_size: int = 64 * 1024) -> str:
     h = bytearray()
     # Use streaming hashing; avoid loading large files entirely
     # Accumulate blake3 (or sha256) digest result at the end
-    hasher_state: List[bytes] = []
+    hasher_state: list[bytes] = []
     try:
         with open(path, "rb") as f:
             while True:
@@ -168,8 +167,8 @@ def embed_files(
     """
     prov = provider or FallbackProvider()
 
-    to_compute: List[Tuple[str, Path]] = []  # (content_hash, path)
-    texts: List[str] = []
+    to_compute: list[tuple[str, Path]] = []  # (content_hash, path)
+    texts: list[str] = []
 
     for p in paths:
         try:

@@ -10,10 +10,8 @@ from __future__ import annotations
 import os
 import sys
 from pathlib import Path
-from typing import Dict, Iterable, Tuple
 
 import pytest
-
 
 # Make repo root importable for tests (avoid requiring `pip install -e .`).
 _REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -44,7 +42,7 @@ def make_tree(tmp_path: Path):
         make_tree({"a/b.txt": "hello", "empty/": None})
     """
 
-    def _make(spec: Dict[str, str | bytes | None], *, root: Path | None = None) -> Path:
+    def _make(spec: dict[str, str | bytes | None], *, root: Path | None = None) -> Path:
         base = root or tmp_path
         for rel, content in spec.items():
             p = base / rel
@@ -69,7 +67,7 @@ def make_tree(tmp_path: Path):
 
 
 @pytest.fixture
-def long_path(tmp_path: Path) -> Tuple[Path, Path]:
+def long_path(tmp_path: Path) -> tuple[Path, Path]:
     """Return a path pair (normal, maybe-long) to exercise Windows prefixing.
 
     The second element is a path whose textual representation is long enough

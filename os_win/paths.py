@@ -14,8 +14,6 @@ The helpers avoid any outbound network calls and do not perform I/O themselves.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict
-
 
 _EXTENDED_PREFIX = "\\\\?\\"
 
@@ -105,7 +103,7 @@ def get_known_folder(name: str) -> Path:
 
     # Basic, environment-variable-based mapping. Avoids shell APIs for privacy
     # and to keep the code self-contained and testable cross-platform.
-    env: Dict[str, str] = {}
+    env: dict[str, str] = {}
     try:
         import os
 
@@ -120,7 +118,7 @@ def get_known_folder(name: str) -> Path:
         local_appdata = Path(env.get("LOCALAPPDATA", str(userprofile / "AppData" / "Local")))
         temp = Path(env.get("TEMP", env.get("TMP", str(local_appdata / "Temp"))))
 
-        mapping: Dict[str, Path] = {
+        mapping: dict[str, Path] = {
             "desktop": userprofile / "Desktop",
             "downloads": userprofile / "Downloads",
             "documents": userprofile / "Documents",

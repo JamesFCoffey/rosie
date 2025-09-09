@@ -9,8 +9,8 @@ while remaining replay-friendly (no side effects during apply).
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass, field
-from typing import Dict, Iterable, List, Tuple
 
 from storage.event_store import EventRecord
 
@@ -23,7 +23,7 @@ class EmbeddingCache:
     edits if desired by callers. Use ``mtime=0.0`` for pure content-hash keys.
     """
 
-    entries: Dict[Tuple[str, float], List[float]] = field(default_factory=dict)
+    entries: dict[tuple[str, float], list[float]] = field(default_factory=dict)
 
     def apply(self, event: EventRecord) -> None:
         """Apply events that may relate to embeddings.
@@ -45,7 +45,7 @@ class EmbeddingCache:
         """
         self.entries[(content_hash, mtime)] = list(vector)
 
-    def get(self, *, content_hash: str, mtime: float = 0.0) -> List[float] | None:
+    def get(self, *, content_hash: str, mtime: float = 0.0) -> list[float] | None:
         """Retrieve an embedding vector by key.
 
         Args:

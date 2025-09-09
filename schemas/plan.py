@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List
 
 from pydantic import BaseModel, Field
 
@@ -27,4 +26,4 @@ class PlanItemModel(_JsonMixin):
 
 class PlanModel(_JsonMixin):
     id: str
-    items: List[PlanItemModel]
+    items: list[PlanItemModel]

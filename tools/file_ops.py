@@ -11,7 +11,6 @@ from __future__ import annotations
 import os
 import shutil
 from pathlib import Path
-from typing import Tuple
 
 try:  # Prefer blake3 if available for speed
     from blake3 import blake3 as _blake3
@@ -77,7 +76,7 @@ def atomic_rename(src: Path, dst: Path) -> bool:
     return True
 
 
-def copy_verify_delete(src: Path, dst: Path) -> Tuple[bool, str]:
+def copy_verify_delete(src: Path, dst: Path) -> tuple[bool, str]:
     """Copy file or directory across volumes, verify contents, then delete source.
 
     For files: checksum verification is performed. For directories: performs a

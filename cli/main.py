@@ -14,19 +14,20 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
-from typing import Optional
 
 import typer
 from rich.console import Console
 from rich.table import Table
 
-from core.graph import Orchestrator
 from agents.planner_agent import PlannerAgent
-from projections.plan_view import PlanProjection
+from core.graph import Orchestrator
 from projections.base import replay
 from projections.file_index import FileIndex
+from projections.plan_view import PlanProjection
 
-app = typer.Typer(add_completion=False, help="Rosie — local-first cleanup maid (dry-run by default)")
+app = typer.Typer(
+    add_completion=False, help="Rosie — local-first cleanup maid (dry-run by default)"
+)
 console = Console()
 
 
@@ -43,16 +44,18 @@ def default_db_path() -> Path:
 
 @app.command()
 def scan(
-    path: Path = typer.Argument(..., exists=True, readable=True, resolve_path=True, help="Root path"),
-    rules: Optional[Path] = typer.Option(None, "--rules", help="YAML rules file"),
+    path: Path = typer.Argument(
+        ..., exists=True, readable=True, resolve_path=True, help="Root path"
+    ),
+    rules: Path | None = typer.Option(None, "--rules", help="YAML rules file"),
     semantic: bool = typer.Option(False, "--semantic", help="Enable embeddings+clustering"),
-    max_depth: Optional[int] = typer.Option(None, "--max-depth", min=1),
-    max_children: Optional[int] = typer.Option(None, "--max-children", min=1),
-    include: Optional[str] = typer.Option(None, "--include", help="Comma-separated globs to include"),
-    exclude: Optional[str] = typer.Option(None, "--exclude", help="Comma-separated globs to exclude"),
-    out: Optional[Path] = typer.Option(None, "--out", help="Write plan JSON to file"),
+    max_depth: int | None = typer.Option(None, "--max-depth", min=1),
+    max_children: int | None = typer.Option(None, "--max-children", min=1),
+    include: str | None = typer.Option(None, "--include", help="Comma-separated globs to include"),
+    exclude: str | None = typer.Option(None, "--exclude", help="Comma-separated globs to exclude"),
+    out: Path | None = typer.Option(None, "--out", help="Write plan JSON to file"),
     limit: int = typer.Option(20, "--limit", min=1, help="Summary limit for display"),
-    db: Optional[Path] = typer.Option(None, "--db", help="Path to event store DB"),
+    db: Path | None = typer.Option(None, "--db", help="Path to event store DB"),
 ):
     """Scan path and produce a dry-run plan.
 
@@ -99,7 +102,7 @@ def scan(
         folders.add_column("Folder")
         folders.add_column("Size (MB)", justify="right")
         for path, size in top:
-            folders.add_row(str(path), f"{size / (1024*1024):.2f}")
+            folders.add_row(str(path), f"{size / (1024 * 1024):.2f}")
         console.print(folders)
 
     if out:
@@ -110,11 +113,11 @@ def scan(
 
 @app.command()
 def apply(
-    plan: Optional[Path] = typer.Option(None, "--plan", help="Plan JSON to apply"),
-    checkpoint: Optional[Path] = typer.Option(None, "--checkpoint", help="Checkpoint output path"),
+    plan: Path | None = typer.Option(None, "--plan", help="Plan JSON to apply"),
+    checkpoint: Path | None = typer.Option(None, "--checkpoint", help="Checkpoint output path"),
     yes: bool = typer.Option(False, "--yes", help="Confirm execution; otherwise dry-run only"),
     force: bool = typer.Option(False, "--force", help="Override OneDrive guard for moves"),
-    db: Optional[Path] = typer.Option(None, "--db", help="Path to event store DB"),
+    db: Path | None = typer.Option(None, "--db", help="Path to event store DB"),
 ):
     """Apply an approved plan using Windows-safe operations.
 
@@ -132,10 +135,9 @@ def apply(
 @app.command()
 def undo(
     checkpoint: Path = typer.Option(..., "--checkpoint", exists=True, resolve_path=True),
-    db: Optional[Path] = typer.Option(None, "--db", help="Path to event store DB"),
+    db: Path | None = typer.Option(None, "--db", help="Path to event store DB"),
 ):
-    """Undo a checkpointed apply operation.
-    """
+    """Undo a checkpointed apply operation."""
     orchestrator = Orchestrator(db_path=db or default_db_path())
     result = orchestrator.undo(checkpoint_path=checkpoint)
     console.log(f"Undo result: {result.summary}")
@@ -148,10 +150,9 @@ def dev_clean(
         "all", "--preset", help="Preset to target caches", case_sensitive=False
     ),
     dry_run: bool = typer.Option(True, "--dry-run/--apply", help="List or delete via recycle bin"),
-    db: Optional[Path] = typer.Option(None, "--db", help="Path to event store DB"),
+    db: Path | None = typer.Option(None, "--db", help="Path to event store DB"),
 ):
-    """List and optionally remove common dev caches under PATH.
-    """
+    """List and optionally remove common dev caches under PATH."""
     orchestrator = Orchestrator(db_path=db or default_db_path())
     report = orchestrator.dev_clean(path=path, preset=preset, dry_run=dry_run)
 

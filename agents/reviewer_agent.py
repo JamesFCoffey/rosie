@@ -7,13 +7,13 @@ scripted test inputs.
 
 from __future__ import annotations
 
-from typing import Iterable, Optional
+from collections.abc import Iterable
 
+from cli.tui import ReviewResult, run_review
 from projections.base import replay
 from projections.plan_view import PlanProjection, PlanView
 from schemas import events as ev
 from storage.event_store import EventStore
-from cli.tui import ReviewResult, run_review
 
 
 class ReviewerAgent:
@@ -31,7 +31,7 @@ class ReviewerAgent:
         self,
         plan: PlanView,
         *,
-        commands: Optional[Iterable[str]] = None,
+        commands: Iterable[str] | None = None,
     ) -> ReviewResult:
         """Run a review session and emit events.
 

@@ -7,7 +7,6 @@ Defines domain event models with a stable ``type`` field and provides
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -33,7 +32,7 @@ class FilesScanned(_JsonMixin):
     root: Path
     count: int
     # Optional batch payload for detailed scanning; backward-compatible
-    batch: Optional[List[dict]] = None
+    batch: list[dict] | None = None
 
 
 class RuleMatched(_JsonMixin):
@@ -52,7 +51,7 @@ class ClustersFormed(_JsonMixin):
     count: int
     # Optional per-item assignments for downstream projections
     # Each item may carry an optional cluster label; items with cluster_id = -1 are noise.
-    items: Optional[List["ClusterAssignment"]] = None
+    items: list[ClusterAssignment] | None = None
 
 
 class ClusterAssignment(_JsonMixin):
@@ -68,19 +67,19 @@ class ClusterAssignment(_JsonMixin):
     path: Path
     cluster_id: int
     confidence: float = Field(ge=0.0, le=1.0)
-    label: Optional[str] = None
+    label: str | None = None
 
 
 class PlanProposed(_JsonMixin):
     type: str = "PlanProposed"
     plan_id: str
-    item_ids: List[str]
+    item_ids: list[str]
 
 
 class UserApproved(_JsonMixin):
     type: str = "UserApproved"
     plan_id: str
-    item_ids: List[str]
+    item_ids: list[str]
 
 
 class CorrectionAdded(_JsonMixin):
@@ -92,7 +91,7 @@ class CorrectionAdded(_JsonMixin):
 class PlanFinalized(_JsonMixin):
     type: str = "PlanFinalized"
     plan_id: str
-    approved_item_ids: List[str]
+    approved_item_ids: list[str]
 
 
 class ApplyStarted(_JsonMixin):
@@ -104,7 +103,7 @@ class ActionApplied(_JsonMixin):
     type: str = "ActionApplied"
     item_id: str
     status: str
-    message: Optional[str] = None
+    message: str | None = None
 
 
 class UndoPerformed(_JsonMixin):

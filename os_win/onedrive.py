@@ -8,8 +8,8 @@ matching so tests can simulate OneDrive paths.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 
 
 def _segments(p: Path) -> Iterable[str]:

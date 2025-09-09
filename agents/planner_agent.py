@@ -12,15 +12,14 @@ The agent is offline by default and avoids any network calls.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List, Optional
 
 from projections.base import replay
 from projections.file_index import FileIndex
-from projections.plan_view import PlanItem, PlanView, PlanProjection
+from projections.plan_view import PlanItem, PlanProjection, PlanView
 from schemas import events as ev
 from storage.event_store import EventStore
-from tools import embeddings as emb
 from tools import clustering as cl
+from tools import embeddings as emb
 from tools import rule_engine
 
 
@@ -36,11 +35,11 @@ class PlannerAgent:
     def __init__(self, store: EventStore) -> None:
         self.store = store
 
-    def _collect_files_from_events(self, *, root: Path) -> List[Path]:
+    def _collect_files_from_events(self, *, root: Path) -> list[Path]:
         idx = FileIndex()
         replay(idx, self.store)
         # Prefer files under the provided root
-        files: List[Path] = []
+        files: list[Path] = []
         for meta in idx.entries.values():
             try:
                 if meta.is_dir:
@@ -58,7 +57,7 @@ class PlannerAgent:
         *,
         root: Path,
         semantic: bool = False,
-        rules_path: Optional[Path] = None,
+        rules_path: Path | None = None,
     ) -> PlanView:
         """Run rule matching and optional clustering, then emit PlanProposed.
 
@@ -112,7 +111,9 @@ class PlannerAgent:
         replay(proj, self.store)
         plan = proj.current_plan()
         try:
-            self.store.append(ev.PlanProposed(plan_id=plan.id, item_ids=[it.id for it in plan.items]))
+            self.store.append(
+                ev.PlanProposed(plan_id=plan.id, item_ids=[it.id for it in plan.items])
+            )
         except Exception:
             pass
 

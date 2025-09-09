@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 from agents.executor_agent import ExecutorAgent
@@ -17,7 +16,13 @@ def test_executor_refuses_too_many_actions(tmp_path: Path) -> None:
     try:
         # Create a plan with 5 items but set max_actions=2 to trigger refusal
         items = [
-            PlanItem(id=f"i{n}", action="create_dir", target=tmp_path / f"d{n}", reason="t", confidence=1.0)
+            PlanItem(
+                id=f"i{n}",
+                action="create_dir",
+                target=tmp_path / f"d{n}",
+                reason="t",
+                confidence=1.0,
+            )
             for n in range(5)
         ]
         plan = PlanView(items=items)
@@ -80,4 +85,3 @@ def test_executor_refuses_large_move_total(tmp_path: Path) -> None:
         assert "move_size" in res.summary
     finally:
         store.close()
-

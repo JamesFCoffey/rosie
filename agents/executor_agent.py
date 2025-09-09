@@ -9,16 +9,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from os_win.onedrive import is_onedrive_path
 from projections.base import replay
-from projections.plan_view import PlanProjection
-from projections.plan_view import PlanView
+from projections.plan_view import PlanProjection, PlanView
 from schemas import events as ev
 from schemas.checkpoint import Checkpoint, CheckpointAction
 from storage.event_store import EventStore
 from tools import checkpoint as ck
 from tools import file_ops
-from os_win.onedrive import is_onedrive_path
-
 
 # Conservative defaults; tests can override via parameters to apply().
 MAX_ACTIONS_DEFAULT = 1000
@@ -73,7 +71,11 @@ class ExecutorAgent:
         # Safety: refuse if too many actions in one run
         lim_actions = max_actions if max_actions is not None else MAX_ACTIONS_DEFAULT
         if len(plan.items) > lim_actions:
-            return ExecutionResult(applied=0, skipped=len(plan.items), summary=f"refused: too_many_actions>{lim_actions}")
+            return ExecutionResult(
+                applied=0,
+                skipped=len(plan.items),
+                summary=f"refused: too_many_actions>{lim_actions}",
+            )
 
         # Safety: OneDrive guard (unless forced). If any move targets or sources
         # an OneDrive path, refuse by default to avoid sync/placeholder issues.
@@ -94,7 +96,11 @@ class ExecutorAgent:
                 continue
 
         # Safety: total move size threshold
-        lim_move = max_total_move_bytes if max_total_move_bytes is not None else MAX_TOTAL_MOVE_BYTES_DEFAULT
+        lim_move = (
+            max_total_move_bytes
+            if max_total_move_bytes is not None
+            else MAX_TOTAL_MOVE_BYTES_DEFAULT
+        )
         if lim_move >= 0:
             total_bytes = 0
             for it in plan.items:
@@ -141,7 +147,9 @@ class ExecutorAgent:
                 if it.action == "create_dir":
                     file_ops.ensure_parent(it.target)
                     Path(it.target).mkdir(parents=True, exist_ok=True)
-                    ck.append_action(ck_path, CheckpointAction(item_id=it.id, op="mkdir", src=it.target))
+                    ck.append_action(
+                        ck_path, CheckpointAction(item_id=it.id, op="mkdir", src=it.target)
+                    )
                     status = "applied"
                     applied += 1
                 elif it.action == "move":
@@ -154,14 +162,18 @@ class ExecutorAgent:
                     else:
                         dst = Path(it.target)
                         if file_ops.atomic_rename(src, dst):
-                            ck.append_action(ck_path, CheckpointAction(item_id=it.id, op="move", src=src, dst=dst))
+                            ck.append_action(
+                                ck_path,
+                                CheckpointAction(item_id=it.id, op="move", src=src, dst=dst),
+                            )
                             applied += 1
                             status = "applied"
                         else:
                             ok, msg = file_ops.copy_verify_delete(src, dst)
                             if ok:
                                 ck.append_action(
-                                    ck_path, CheckpointAction(item_id=it.id, op="move_xv", src=src, dst=dst)
+                                    ck_path,
+                                    CheckpointAction(item_id=it.id, op="move_xv", src=src, dst=dst),
                                 )
                                 applied += 1
                                 status = "applied"
@@ -180,7 +192,9 @@ class ExecutorAgent:
                 message = str(e)
             finally:
                 try:
-                    self.store.append(ev.ActionApplied(item_id=it.id, status=status, message=message))
+                    self.store.append(
+                        ev.ActionApplied(item_id=it.id, status=status, message=message)
+                    )
                 except Exception:
                     pass
 
@@ -235,4 +249,6 @@ class ExecutorAgent:
             self.store.append(ev.UndoPerformed(checkpoint_path=checkpoint_path))
         except Exception:
             pass
-        return ExecutionResult(applied=undone, skipped=skipped, summary=f"undone={undone} skipped={skipped}")
+        return ExecutionResult(
+            applied=undone, skipped=skipped, summary=f"undone={undone} skipped={skipped}"
+        )

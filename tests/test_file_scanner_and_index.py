@@ -7,7 +7,6 @@ from pathlib import Path
 
 from projections.base import replay
 from projections.file_index import FileIndex
-from schemas import events as ev
 from storage.event_store import EventStore
 from tools import file_scanner
 

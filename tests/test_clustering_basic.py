@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List
 
 from projections.base import replay
 from projections.plan_view import PlanProjection
@@ -26,7 +25,7 @@ def test_hdbscan_with_fallback_and_event(tmp_path: Path) -> None:
     c.write_text("zeta xi")
 
     # Synthetic vectors: make a and b close, c far
-    v: List[List[float]] = [
+    v: list[list[float]] = [
         [1.0, 0.0, 0.0, 0.0],  # a
         [0.95, 0.0, 0.0, 0.0],  # b
         [0.0, 1.0, 0.0, 0.0],  # c (noise)

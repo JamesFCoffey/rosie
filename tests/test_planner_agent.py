@@ -6,10 +6,8 @@ from pathlib import Path
 from agents.planner_agent import PlannerAgent
 from projections.base import replay
 from projections.plan_view import PlanProjection
-from schemas import events as ev
 from storage.event_store import EventStore
 from tools import file_scanner
-from tools import rule_engine
 
 
 def _db(tmp_path: Path) -> Path:

@@ -13,13 +13,12 @@ from __future__ import annotations
 
 import os
 import time
+from collections.abc import Iterable, Sequence
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
-from schemas.rules import RuleSet
 from schemas import events as ev
+from schemas.rules import RuleSet
 from storage.event_store import EventStore
-
 
 # ----------------------------
 # Matching helpers and scoring
@@ -45,7 +44,7 @@ def _matches_any(p: Path, patterns: Sequence[str]) -> bool:
     return False
 
 
-def _file_stat(p: Path) -> Optional[os.stat_result]:
+def _file_stat(p: Path) -> os.stat_result | None:
     try:
         return os.stat(p)
     except Exception:
@@ -55,10 +54,10 @@ def _file_stat(p: Path) -> Optional[os.stat_result]:
 def _size_age_ok(
     p: Path,
     *,
-    min_size: Optional[int],
-    max_size: Optional[int],
-    min_age_days: Optional[float],
-    max_age_days: Optional[float],
+    min_size: int | None,
+    max_size: int | None,
+    min_age_days: float | None,
+    max_age_days: float | None,
 ) -> bool:
     st = _file_stat(p)
     if st is None:
@@ -79,20 +78,20 @@ def _size_age_ok(
     return True
 
 
-def _rule_match_score(p: Path, rule_json: dict) -> Tuple[int, bool]:
+def _rule_match_score(p: Path, rule_json: dict) -> tuple[int, bool]:
     """Return (score, matched) for a rule against path.
 
     Score encodes precedence: path=3, glob=2, ext=1, none=0. ``matched`` is the
     final decision including allow/deny and size/age constraints.
     """
     # Support both new fields and legacy include/exclude
-    paths: List[str] = list(rule_json.get("paths") or [])
-    globs: List[str] = list(rule_json.get("globs") or [])
-    exts: List[str] = [_norm_ext(e) for e in (rule_json.get("exts") or [])]
-    include: List[str] = list(rule_json.get("include") or [])
-    exclude: List[str] = list(rule_json.get("exclude") or [])
-    allow: List[str] = list(rule_json.get("allow") or [])
-    deny: List[str] = list(rule_json.get("deny") or [])
+    paths: list[str] = list(rule_json.get("paths") or [])
+    globs: list[str] = list(rule_json.get("globs") or [])
+    exts: list[str] = [_norm_ext(e) for e in (rule_json.get("exts") or [])]
+    include: list[str] = list(rule_json.get("include") or [])
+    exclude: list[str] = list(rule_json.get("exclude") or [])
+    allow: list[str] = list(rule_json.get("allow") or [])
+    deny: list[str] = list(rule_json.get("deny") or [])
 
     # Conditions
     min_size = rule_json.get("min_size")
@@ -155,16 +154,16 @@ def _rule_match_score(p: Path, rule_json: dict) -> Tuple[int, bool]:
     return score, True
 
 
-def match_rules(paths: Iterable[Path], rules: RuleSet) -> Dict[Path, str]:
+def match_rules(paths: Iterable[Path], rules: RuleSet) -> dict[Path, str]:
     """Return a deterministic mapping of ``path -> rule_id``.
 
     Applies precedence: path > glob > ext. Within the same precedence, retains
     the first matching rule order from the provided RuleSet.
     """
-    result: Dict[Path, str] = {}
+    result: dict[Path, str] = {}
     for p in paths:
         best_score = -1
-        best_rule_id: Optional[str] = None
+        best_rule_id: str | None = None
         for rule in rules.rules:
             rj = rule.model_dump(mode="json")
             score, ok = _rule_match_score(p, rj)

@@ -11,7 +11,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List
 
 from pydantic import BaseModel, Field
 
@@ -29,7 +28,7 @@ class PlanItem(BaseModel):
 
 
 class PlanView(BaseModel):
-    items: List[PlanItem] = []
+    items: list[PlanItem] = []
 
 
 @dataclass
@@ -41,7 +40,7 @@ class PlanProjection:
     counter that increments on ``CorrectionAdded`` events.
     """
 
-    items: Dict[str, PlanItemModel] = field(default_factory=dict)
+    items: dict[str, PlanItemModel] = field(default_factory=dict)
     correction_gen: int = 0
     root: Path | None = None
 
@@ -83,8 +82,8 @@ class PlanProjection:
             if not items or self.root is None:
                 return
             # Group by cluster id, skip noise (-1)
-            buckets: Dict[int, List[tuple[Path, float, str | None]]] = {}
-            labels: Dict[int, str] = {}
+            buckets: dict[int, list[tuple[Path, float, str | None]]] = {}
+            labels: dict[int, str] = {}
             for it in items:
                 cid = int(it.get("cluster_id", -1))
                 if cid == -1:
@@ -151,7 +150,7 @@ class PlanProjection:
         }
         return compute_checksum("PlanItem", payload)
 
-    def _compute_plan_id(self, *, items: List[PlanItemModel]) -> str:
+    def _compute_plan_id(self, *, items: list[PlanItemModel]) -> str:
         # Deterministic JSON payload for hashing.
         payload = {
             "version": 1,

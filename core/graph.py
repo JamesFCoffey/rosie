@@ -8,9 +8,9 @@ triggered by events (e.g., ``CorrectionAdded``).
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 try:
     import structlog  # type: ignore
@@ -21,16 +21,13 @@ except Exception:  # pragma: no cover - fallback when structlog is unavailable
 
     logger = logging.getLogger(__name__)
 
-from projections.plan_view import PlanItem, PlanView, PlanProjection
+from agents.executor_agent import ExecutorAgent
 from projections.base import replay
+from projections.plan_view import PlanItem, PlanProjection, PlanView
 from schemas import events as ev
 from storage.event_store import EventStore
+from tools import clustering, file_scanner, rule_engine
 from tools import dev_clean as dev_clean_tool
-from tools import file_scanner
-from tools import rule_engine, clustering
-from agents.executor_agent import ExecutorAgent
-from projections.plan_view import PlanProjection
-from projections.base import replay
 
 # logger defined above (structlog or stdlib logging)
 
@@ -83,15 +80,15 @@ class PipelineState:
     """In-memory state for the scanning → rules → clustering pipeline."""
 
     last_event_id: int = 0
-    root: Optional[Path] = None
-    paths: Set[Path] = field(default_factory=set)
-    rule_matches: Dict[Path, str] = field(default_factory=dict)
-    clusters: Dict[str, List[Path]] = field(default_factory=dict)
-    dirty_paths: Set[Path] = field(default_factory=set)
+    root: Path | None = None
+    paths: set[Path] = field(default_factory=set)
+    rule_matches: dict[Path, str] = field(default_factory=dict)
+    clusters: dict[str, list[Path]] = field(default_factory=dict)
+    dirty_paths: set[Path] = field(default_factory=set)
     full_invalidate: bool = False
     runs: NodeRunStats = field(default_factory=NodeRunStats)
     # Optional rules provided by caller/tests
-    ruleset_json: Optional[dict] = None  # store Pydantic dump for stability
+    ruleset_json: dict | None = None  # store Pydantic dump for stability
 
 
 class Orchestrator:
@@ -117,7 +114,7 @@ class Orchestrator:
     # Public configuration helpers
     # -----------------------------
 
-    def set_rules(self, rules: Optional["schemas.rules.RuleSet"]) -> None:  # noqa: F821
+    def set_rules(self, rules: schemas.rules.RuleSet | None) -> None:  # noqa: F821
         """Attach a ruleset for the rule engine.
 
         Args:
@@ -134,12 +131,12 @@ class Orchestrator:
         self,
         *,
         root: Path,
-        rules_path: Optional[Path],
+        rules_path: Path | None,
         semantic: bool,
-        max_depth: Optional[int],
-        max_children: Optional[int],
-        include: Optional[str],
-        exclude: Optional[str],
+        max_depth: int | None,
+        max_children: int | None,
+        include: str | None,
+        exclude: str | None,
     ) -> PlanView:
         """Scan the filesystem and build a dry-run plan view.
 
@@ -184,8 +181,8 @@ class Orchestrator:
     def apply(
         self,
         *,
-        plan_path: Optional[Path],
-        checkpoint_path: Optional[Path],
+        plan_path: Path | None,
+        checkpoint_path: Path | None,
         force: bool = False,
         max_actions: int | None = None,
         max_total_move_bytes: int | None = None,
@@ -206,14 +203,17 @@ class Orchestrator:
             # Treat as explicit approval and emit PlanFinalized
             try:
                 import json as _json
+
                 data = _json.loads(Path(plan_path).read_text())
                 # Minimal validation of schema
                 plan_id = str(data.get("id"))
                 item_ids = [str(it.get("id")) for it in (data.get("items") or [])]
                 if plan_id:
-                    self.events.append(ev.PlanFinalized(plan_id=plan_id, approved_item_ids=item_ids))
+                    self.events.append(
+                        ev.PlanFinalized(plan_id=plan_id, approved_item_ids=item_ids)
+                    )
                 # Use a lightweight PlanView for execution
-                from projections.plan_view import PlanView, PlanItem
+                from projections.plan_view import PlanItem, PlanView
 
                 items = [
                     PlanItem(
@@ -276,6 +276,7 @@ class Orchestrator:
         """
         import os
         import shutil
+
         from tools import file_ops
 
         findings = dev_clean_tool.find_dev_caches(path, preset=preset)
@@ -300,12 +301,12 @@ class Orchestrator:
             items.append(DevCleanItem(path=f.path, size_mb=f.size_mb, action=action))
         return DevCleanReport(items=items)
 
-    def _safe_scan(
-        self, *, root: Path, include: Optional[str], exclude: Optional[str]
-    ) -> Iterable[Path]:
+    def _safe_scan(self, *, root: Path, include: str | None, exclude: str | None) -> Iterable[Path]:
         patterns_include = [p.strip() for p in include.split(",") if p.strip()] if include else []
         patterns_exclude = [p.strip() for p in exclude.split(",") if p.strip()] if exclude else []
-        return file_scanner.scan_paths(root=root, include=patterns_include, exclude=patterns_exclude)
+        return file_scanner.scan_paths(
+            root=root, include=patterns_include, exclude=patterns_exclude
+        )
 
     # -----------------------------
     # Async event-driven orchestration
@@ -359,7 +360,7 @@ class Orchestrator:
             await self.run_once()
             try:
                 await asyncio.wait_for(self._stop.wait(), timeout=poll_interval_s)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 pass
 
     def stop(self) -> None:
@@ -389,13 +390,13 @@ class Orchestrator:
             return
         # Determine which paths to evaluate
         if self._state.full_invalidate or not self._state.rule_matches:
-            to_eval: Set[Path] = set(self._state.paths)
+            to_eval: set[Path] = set(self._state.paths)
         else:
             to_eval = set(p for p in self._state.dirty_paths if p in self._state.paths)
         if not to_eval and not self._state.full_invalidate:
             return
         # Execute rule engine over the chosen subset
-        evaluated_set: Set[Path] = set(to_eval if to_eval else self._state.paths)
+        evaluated_set: set[Path] = set(to_eval if to_eval else self._state.paths)
         evaluated_count = len(evaluated_set)
         if self._rules is not None:
             matches = rule_engine.match_rules(evaluated_set, self._rules)
@@ -431,7 +432,9 @@ class Orchestrator:
         if not impacted and not self._state.full_invalidate:
             return
         # Recompute impacted cluster buckets
-        evaluated_count = len(impacted) if not self._state.full_invalidate else len(self._state.rule_matches)
+        evaluated_count = (
+            len(impacted) if not self._state.full_invalidate else len(self._state.rule_matches)
+        )
         if self._state.full_invalidate:
             self._state.clusters = clustering.cluster_by_extension(self._state.rule_matches.keys())
         else:
@@ -439,7 +442,9 @@ class Orchestrator:
             for p in impacted:
                 ext = p.suffix.lower() or "<none>"
                 # Rebuild this bucket from current matches
-                self._state.clusters[ext] = [q for q in self._state.rule_matches if (q.suffix.lower() or "<none>") == ext]
+                self._state.clusters[ext] = [
+                    q for q in self._state.rule_matches if (q.suffix.lower() or "<none>") == ext
+                ]
         self._state.runs.cluster_runs += 1
         self._state.runs.cluster_paths_evaluated = evaluated_count
 
@@ -447,7 +452,7 @@ class Orchestrator:
     # Utilities
     # -----------------------------
 
-    def _extract_path_hint(self, note: str) -> Optional[Path]:
+    def _extract_path_hint(self, note: str) -> Path | None:
         """Parse a ``path=...`` hint from a correction note.
 
         Example supported formats:
@@ -475,7 +480,7 @@ class Orchestrator:
 
     # Expose current plan id for tests/CLI
     @property
-    def current_plan_id(self) -> Optional[str]:
+    def current_plan_id(self) -> str | None:
         try:
             return self._plan.current_plan().id
         except Exception:

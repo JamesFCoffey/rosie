@@ -16,14 +16,13 @@ from __future__ import annotations
 
 import asyncio
 import os
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, List, Optional, Sequence
 
 from os_win.reparse_points import is_reparse_point
 from schemas import events as ev
 from storage.event_store import EventStore
-
 
 DENY_DIR_NAMES: set[str] = {
     ".git",
@@ -122,7 +121,9 @@ def _iter_entries(
                 st = None
             # Skip hidden/system directories by default
             if not (exclude_hidden and _is_hidden_or_system(dpath)):
-                yield ScannedItem(path=dpath, size=0, mtime=(st.st_mtime if st else 0.0), is_dir=True)
+                yield ScannedItem(
+                    path=dpath, size=0, mtime=(st.st_mtime if st else 0.0), is_dir=True
+                )
 
         # Yield files in this directory
         for fname in filenames:
@@ -141,16 +142,18 @@ def _iter_entries(
             # Skip hidden/system files by default
             if exclude_hidden and _is_hidden_or_system(fp):
                 continue
-            yield ScannedItem(path=fp, size=int(getattr(st, "st_size", 0)), mtime=float(st.st_mtime), is_dir=False)
+            yield ScannedItem(
+                path=fp, size=int(getattr(st, "st_size", 0)), mtime=float(st.st_mtime), is_dir=False
+            )
 
 
 async def scan_and_emit(
     *,
     root: Path,
     store: EventStore,
-    include: Optional[Sequence[str]] = None,
-    exclude: Optional[Sequence[str]] = None,
-    deny_dirs: Optional[set[str]] = None,
+    include: Sequence[str] | None = None,
+    exclude: Sequence[str] | None = None,
+    deny_dirs: set[str] | None = None,
     exclude_hidden: bool = True,
     batch_size: int = 512,
 ) -> int:
@@ -205,12 +208,14 @@ async def scan_and_emit(
         for item in _iter_entries(
             root=root, include=inc, exclude=exc, deny_dirs=denies, exclude_hidden=exclude_hidden
         ):
-            batch.append({
-                "path": item.path,
-                "size": item.size,
-                "mtime": item.mtime,
-                "is_dir": item.is_dir,
-            })
+            batch.append(
+                {
+                    "path": item.path,
+                    "size": item.size,
+                    "mtime": item.mtime,
+                    "is_dir": item.is_dir,
+                }
+            )
             if len(batch) >= batch_size:
                 _flush()
 
@@ -219,7 +224,7 @@ async def scan_and_emit(
     return total
 
 
-def scan_paths(*, root: Path, include: List[str], exclude: List[str]) -> Iterable[Path]:
+def scan_paths(*, root: Path, include: list[str], exclude: list[str]) -> Iterable[Path]:
     """Compatibility helper used by orchestrator stub.
 
     Yields files and directories under root honoring basic include/exclude globs.
@@ -227,6 +232,10 @@ def scan_paths(*, root: Path, include: List[str], exclude: List[str]) -> Iterabl
     yield from (
         it.path
         for it in _iter_entries(
-            root=root, include=include, exclude=exclude, deny_dirs=DENY_DIR_NAMES, exclude_hidden=True
+            root=root,
+            include=include,
+            exclude=exclude,
+            deny_dirs=DENY_DIR_NAMES,
+            exclude_hidden=True,
         )
     )

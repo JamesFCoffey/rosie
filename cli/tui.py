@@ -20,8 +20,8 @@ Interactive key bindings can be added later; for tests we accept commands:
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
-from typing import Iterable, List, Sequence, Tuple
 
 from rich.console import Console
 from rich.table import Table
@@ -31,8 +31,8 @@ from projections.plan_view import PlanItem
 
 @dataclass
 class ReviewResult:
-    approved_item_ids: List[str] = field(default_factory=list)
-    corrections: List[str] = field(default_factory=list)
+    approved_item_ids: list[str] = field(default_factory=list)
+    corrections: list[str] = field(default_factory=list)
 
 
 def _risk_score(action: str) -> int:
@@ -48,7 +48,7 @@ def _risk_score(action: str) -> int:
     return 2
 
 
-def _sort_items(items: Sequence[PlanItem]) -> List[PlanItem]:
+def _sort_items(items: Sequence[PlanItem]) -> list[PlanItem]:
     # Higher risk first, lower confidence first (more likely to need review),
     # then by target path to keep deterministic order.
     return sorted(
@@ -69,7 +69,7 @@ def _render_table(items: Sequence[PlanItem], *, console: Console) -> None:
     console.print(table)
 
 
-def _parse_command(cmd: str) -> Tuple[str, List[str]]:
+def _parse_command(cmd: str) -> tuple[str, list[str]]:
     parts = cmd.strip().split()
     if not parts:
         return "", []
