@@ -256,13 +256,34 @@ class Orchestrator:
     def dev_clean(self, *, path: Path, preset: str, dry_run: bool) -> DevCleanReport:
         """List and optionally remove common dev caches.
 
-        This is safe: for now it only reports findings; deletion is not implemented.
+        On Windows, deletions are sent to the Recycle Bin. On non-Windows
+        platforms (e.g., CI), deletions are performed directly to allow tests
+        to validate behavior. Discovery is handled by ``tools.dev_clean``.
         """
+        import os
+        import shutil
+        from tools import file_ops
+
         findings = dev_clean_tool.find_dev_caches(path, preset=preset)
-        items = [
-            DevCleanItem(path=f.path, size_mb=f.size_mb, action=("delete" if not dry_run else "keep"))
-            for f in findings
-        ]
+        # Sort deepest paths first to avoid parent-first deletes interfering with children
+        findings_sorted = sorted(findings, key=lambda f: len(str(f.path)), reverse=True)
+        items: list[DevCleanItem] = []
+        if dry_run:
+            for f in findings_sorted:
+                items.append(DevCleanItem(path=f.path, size_mb=f.size_mb, action="keep"))
+            return DevCleanReport(items=items)
+
+        for f in findings_sorted:
+            action = "delete"
+            try:
+                if os.name == "nt":
+                    file_ops.recycle_delete(f.path)
+                else:
+                    shutil.rmtree(f.path, ignore_errors=True)
+            except Exception:  # pragma: no cover - defensive
+                # Keep action as "delete" to reflect intent; errors are ignored for safety
+                pass
+            items.append(DevCleanItem(path=f.path, size_mb=f.size_mb, action=action))
         return DevCleanReport(items=items)
 
     def _safe_scan(

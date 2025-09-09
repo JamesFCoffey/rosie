@@ -155,13 +155,20 @@ def dev_clean(
     report = orchestrator.dev_clean(path=path, preset=preset, dry_run=dry_run)
 
     table = Table(title="Dev Clean Report")
+    table.add_column("Name")
     table.add_column("Path")
     table.add_column("Size (MB)", justify="right")
     table.add_column("Action")
     total_mb = 0.0
     for item in report.items:
         total_mb += item.size_mb
-        table.add_row(str(item.path), f"{item.size_mb:.2f}", item.action)
+        # Prefer relative path display so leaves like "node_modules" are visible
+        try:
+            rel = item.path.resolve().relative_to(path.resolve())
+            display_path = str(rel)
+        except Exception:
+            display_path = str(item.path)
+        table.add_row(item.path.name, display_path, f"{item.size_mb:.2f}", item.action)
     table.caption = f"Total: {total_mb:.2f} MB"
     console.print(table)
 

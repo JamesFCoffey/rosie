@@ -1,13 +1,22 @@
-"""Dev cache detector (stub)."""
+"""Developer cache detector and sizer.
+
+Finds common development build/cache directories under a root and reports their
+sizes. Used by the ``rosie dev-clean`` CLI to present a dry-run summary and to
+optionally remove caches (handled by the orchestrator using Windows-safe ops).
+
+This module performs no deletions; it is pure discovery + sizing.
+"""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, List
+from typing import Iterable, List, Dict, Set
 
 
-DEV_CACHE_DIRS = [
+# Canonical cache directory patterns; paths are matched via Path.rglob and can
+# include simple subpath globs like ".next/cache".
+DEV_CACHE_DIRS: List[str] = [
     "node_modules",
     ".venv",
     "__pycache__",
@@ -22,6 +31,33 @@ DEV_CACHE_DIRS = [
     ".parcel-cache",
 ]
 
+# Preset mapping to subsets. Presets are conservative; "all" is the union.
+PRESETS: Dict[str, List[str]] = {
+    "all": DEV_CACHE_DIRS,
+    "node": [
+        "node_modules",
+        ".next/cache",
+        ".parcel-cache",
+        "dist",
+        "build",
+        ".cache",
+    ],
+    "python": [
+        ".venv",
+        "__pycache__",
+        ".pytest_cache",
+        ".tox",
+        "build",
+        "dist",
+        ".cache",
+    ],
+    # Keep placeholder for future; currently behaves as no-op specialization
+    "docker": [
+        ".cache",
+        "build",
+    ],
+}
+
 
 @dataclass
 class DevCacheFinding:
@@ -30,24 +66,50 @@ class DevCacheFinding:
 
 
 def find_dev_caches(root: Path, *, preset: str = "all") -> List[DevCacheFinding]:
+    """Find dev cache directories under ``root``.
+
+    Args:
+        root: Root directory to search.
+        preset: One of presets in ``PRESETS`` (e.g., "all", "node", "python").
+
+    Returns:
+        List of findings with resolved paths and sizes in MB.
+    """
     root = root.resolve()
+    seen: Set[Path] = set()
     results: List[DevCacheFinding] = []
-    patterns = DEV_CACHE_DIRS if preset.lower() == "all" else DEV_CACHE_DIRS
+    patterns = PRESETS.get(preset.lower(), DEV_CACHE_DIRS)
     for pat in patterns:
         for p in root.rglob(pat):
-            if p.is_dir():
-                size_mb = _dir_size_mb(p)
-                results.append(DevCacheFinding(path=p, size_mb=size_mb))
+            try:
+                if not p.exists() or not p.is_dir():
+                    continue
+            except OSError:
+                continue
+            rp = p.resolve()
+            if rp in seen:
+                continue
+            seen.add(rp)
+            size_mb = _dir_size_mb(rp)
+            results.append(DevCacheFinding(path=rp, size_mb=size_mb))
     return results
 
 
 def _dir_size_mb(path: Path) -> float:
+    """Compute directory size in MB, best-effort and safe.
+
+    Skips entries that cannot be stat'ed to avoid breaking discovery on
+    permission/reparse issues.
+    """
     total = 0
-    for file in path.rglob("*"):
+    try:
+        it = path.rglob("*")
+    except Exception:
+        it = []  # type: ignore[assignment]
+    for file in it:
         try:
             if file.is_file():
                 total += file.stat().st_size
         except OSError:
             continue
     return total / (1024 * 1024)
-
