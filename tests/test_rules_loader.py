@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping, Sequence
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -24,7 +26,7 @@ def test_json_loader_parses_rules(tmp_path: Path) -> None:
     assert rs.rules[1].id == "R2"
 
 
-def test_yaml_without_pyyaml_raises_clear_error(monkeypatch, tmp_path: Path) -> None:
+def test_yaml_without_pyyaml_raises_clear_error(monkeypatch: Any, tmp_path: Path) -> None:
     yf = tmp_path / "rules.yaml"
     yf.write_text(
         """
@@ -38,10 +40,16 @@ rules:
     # Force import of yaml to fail even if installed
     real_import = __import__
 
-    def fake_import(name, *args, **kwargs):  # type: ignore[override]
+    def fake_import(
+        name: str,
+        globals: Mapping[str, object] | None = None,
+        locals: Mapping[str, object] | None = None,
+        fromlist: Sequence[str] = (),
+        level: int = 0,
+    ) -> Any:
         if name == "yaml":
             raise ModuleNotFoundError("No module named 'yaml'")
-        return real_import(name, *args, **kwargs)
+        return real_import(name, globals, locals, fromlist, level)
 
     monkeypatch.setattr("builtins.__import__", fake_import)
 

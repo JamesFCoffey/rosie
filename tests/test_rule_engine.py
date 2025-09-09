@@ -81,8 +81,9 @@ def test_yaml_loader_and_event_emission(tmp_path: Path) -> None:
         ]
     }
     try:
-        import yaml  # type: ignore
+        import importlib
 
+        yaml = importlib.import_module("yaml")
         rules_file.write_text(yaml.safe_dump(content))
     except Exception:
         rules_file.write_text(json.dumps(content))

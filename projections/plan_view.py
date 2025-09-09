@@ -52,7 +52,8 @@ class PlanProjection:
         if et == "FilesScanned":
             # Track root for destination planning.
             try:
-                self.root = Path(data.get("root")) if data.get("root") else None
+                raw_root = data.get("root")
+                self.root = Path(str(raw_root)) if raw_root else None
             except Exception:
                 self.root = None
 

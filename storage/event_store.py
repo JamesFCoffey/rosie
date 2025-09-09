@@ -23,7 +23,7 @@ try:  # Prefer blake3 if available
 except Exception:  # Fallback to sha256 if blake3 is unavailable
     import hashlib
 
-    def _hash_bytes(data: bytes) -> str:  # type: ignore[no-redef]
+    def _hash_bytes(data: bytes) -> str:
         return hashlib.sha256(data).hexdigest()
 
     HASH_ALGO = "sha256"
@@ -83,13 +83,13 @@ class EventStore:
         if hasattr(event, "model_dump") and callable(getattr(event, "model_dump")):
             # Prefer JSON-friendly dump (Pydantic v2)
             try:
-                payload = event.model_dump(mode="json")  # type: ignore[call-arg]
+                payload = event.model_dump(mode="json")
             except TypeError:
-                payload = event.model_dump()  # type: ignore[no-any-return]
+                payload = event.model_dump()
             event_type = event.__class__.__name__
         elif isinstance(event, Mapping) and "type" in event and "data" in event:
-            event_type = str(event["type"])  # type: ignore[index]
-            payload = event["data"]  # type: ignore[index]
+            event_type = str(event.get("type"))
+            payload = event.get("data")
         else:
             # Fallback: treat object as a mapping and infer type from class name
             if isinstance(event, Mapping):
@@ -118,6 +118,7 @@ class EventStore:
             (ts, event_type, data_bytes, checksum, SCHEMA_VERSION),
         )
         self._conn.commit()
+        assert cur.lastrowid is not None
         return int(cur.lastrowid)
 
     def read_since(self, last_id: int) -> list[EventRecord]:

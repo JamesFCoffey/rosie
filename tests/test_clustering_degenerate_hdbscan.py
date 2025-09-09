@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import tools.clustering as cl
 
 
-def test_fallback_when_hdbscan_all_noise(monkeypatch, tmp_path: Path) -> None:
+def test_fallback_when_hdbscan_all_noise(monkeypatch: Any, tmp_path: Path) -> None:
     # Force the HDBSCAN path to produce all-noise labels
-    def _fake_hdbscan(vectors, *, min_cluster_size: int = 3):  # type: ignore[override]
+    def _fake_hdbscan(
+        vectors: list[list[float]], *, min_cluster_size: int = 3
+    ) -> tuple[list[int], list[float]]:
         n = len(vectors)
         return ([-1] * n, [0.1] * n)
 

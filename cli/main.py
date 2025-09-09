@@ -56,7 +56,7 @@ def scan(
     out: Path | None = typer.Option(None, "--out", help="Write plan JSON to file"),
     limit: int = typer.Option(20, "--limit", min=1, help="Summary limit for display"),
     db: Path | None = typer.Option(None, "--db", help="Path to event store DB"),
-):
+) -> None:
     """Scan path and produce a dry-run plan.
 
     This is a placeholder that records a FilesScanned event and materializes a minimal plan view.
@@ -118,7 +118,7 @@ def apply(
     yes: bool = typer.Option(False, "--yes", help="Confirm execution; otherwise dry-run only"),
     force: bool = typer.Option(False, "--force", help="Override OneDrive guard for moves"),
     db: Path | None = typer.Option(None, "--db", help="Path to event store DB"),
-):
+) -> None:
     """Apply an approved plan using Windows-safe operations.
 
     Requires --yes to mutate disk. Without --yes, prints a reminder and exits non-zero.
@@ -136,7 +136,7 @@ def apply(
 def undo(
     checkpoint: Path = typer.Option(..., "--checkpoint", exists=True, resolve_path=True),
     db: Path | None = typer.Option(None, "--db", help="Path to event store DB"),
-):
+) -> None:
     """Undo a checkpointed apply operation."""
     orchestrator = Orchestrator(db_path=db or default_db_path())
     result = orchestrator.undo(checkpoint_path=checkpoint)
@@ -151,7 +151,7 @@ def dev_clean(
     ),
     dry_run: bool = typer.Option(True, "--dry-run/--apply", help="List or delete via recycle bin"),
     db: Path | None = typer.Option(None, "--db", help="Path to event store DB"),
-):
+) -> None:
     """List and optionally remove common dev caches under PATH."""
     orchestrator = Orchestrator(db_path=db or default_db_path())
     report = orchestrator.dev_clean(path=path, preset=preset, dry_run=dry_run)
@@ -175,9 +175,10 @@ def dev_clean(
     console.print(table)
 
 
-def main() -> None:
+def main() -> int:
     """Entry point for `python -m cli.main`."""
     app()
+    return 0
 
 
 if __name__ == "__main__":

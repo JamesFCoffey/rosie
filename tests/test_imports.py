@@ -1,4 +1,4 @@
-def test_import_core_packages_importable():
+def test_import_core_packages_importable() -> None:
     import agents.executor_agent  # noqa: F401
     import agents.planner_agent  # noqa: F401
     import agents.reviewer_agent  # noqa: F401

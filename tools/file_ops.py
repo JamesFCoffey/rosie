@@ -25,7 +25,7 @@ try:  # Prefer blake3 if available for speed
 except Exception:  # pragma: no cover - fallback
     import hashlib
 
-    def _hash_file(path: Path) -> str:  # type: ignore[no-redef]
+    def _hash_file(path: Path) -> str:
         h = hashlib.sha256()
         with open(path, "rb") as f:
             for chunk in iter(lambda: f.read(1024 * 1024), b""):

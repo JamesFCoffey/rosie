@@ -65,9 +65,8 @@ def shape_cluster_moves(
     # If no child limit or small cluster, place all directly under base
     m = list(members)
     if not max_children or len(m) <= int(max_children) or depth <= 1:
-        dirs = [base]
-        moves = [(p, base / p.name) for p in m]
-        return dirs, moves
+        # Return directly to avoid shadowing later typed variables
+        return [base], [(p, base / p.name) for p in m]
 
     # Split into evenly sized parts under base to satisfy child limit
     per = max(1, int(max_children))

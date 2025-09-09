@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 from projections import base as proj_base
 from schemas import events as ev
@@ -54,7 +55,7 @@ def test_checksum_blake3(tmp_path: Path) -> None:
         store.append(event)
         (row,) = store.read_all()
         # Recompute checksum deterministically using the same algorithm
-        expected = compute_checksum(row.type, row.data)  # uses blake3 if available
+        expected = compute_checksum(row.type, dict(row.data))  # uses blake3 if available
         assert row.checksum == expected
     finally:
         store.close()
@@ -65,7 +66,7 @@ def test_projection_replay_helper(tmp_path: Path) -> None:
         def __init__(self) -> None:
             self.seen: list[str] = []
 
-        def apply(self, event) -> None:  # use Protocol signature
+        def apply(self, event: Any) -> None:  # use Protocol signature
             self.seen.append(f"{event.id}:{event.type}")
 
     store = EventStore(_db_path(tmp_path))

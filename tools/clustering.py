@@ -85,9 +85,11 @@ def _tf_idf_labels(
 # -------------------
 
 
-def _try_hdbscan(vectors: Sequence[Sequence[float]], *, min_cluster_size: int = 3):
+def _try_hdbscan(
+    vectors: Sequence[Sequence[float]], *, min_cluster_size: int = 3
+) -> tuple[list[int], list[float]] | None:
     try:
-        import hdbscan  # type: ignore
+        import hdbscan
 
         clusterer = hdbscan.HDBSCAN(min_cluster_size=max(2, int(min_cluster_size)))
         labels = clusterer.fit_predict(vectors)
@@ -100,9 +102,11 @@ def _try_hdbscan(vectors: Sequence[Sequence[float]], *, min_cluster_size: int = 
         return None
 
 
-def _try_agglomerative(vectors: Sequence[Sequence[float]], *, n_clusters: int | None = None):
+def _try_agglomerative(
+    vectors: Sequence[Sequence[float]], *, n_clusters: int | None = None
+) -> tuple[list[int], list[float]] | None:
     try:
-        from sklearn.cluster import AgglomerativeClustering  # type: ignore
+        from sklearn.cluster import AgglomerativeClustering
 
         n = len(vectors)
         k = int(n_clusters) if n_clusters else max(2, min(5, n // 2 or 1))
@@ -124,7 +128,9 @@ def _cosine_sim(a: Sequence[float], b: Sequence[float]) -> float:
     return dot / (na * nb)
 
 
-def _fallback_threshold(vectors: Sequence[Sequence[float]], *, sim_threshold: float = 0.92):
+def _fallback_threshold(
+    vectors: Sequence[Sequence[float]], *, sim_threshold: float = 0.92
+) -> tuple[list[int], list[float]]:
     n = len(vectors)
     labels = [-1] * n
     current_label = 0

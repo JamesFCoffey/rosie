@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 import sys
+from collections.abc import Callable, Generator
 from pathlib import Path
 
 import pytest
@@ -20,7 +21,7 @@ if str(_REPO_ROOT) not in sys.path:
 
 
 @pytest.fixture
-def chdir_tmp_path(tmp_path: Path) -> Path:
+def chdir_tmp_path(tmp_path: Path) -> Generator[Path, None, None]:
     """Change CWD to a fresh tmp path for isolation.
 
     Returns:
@@ -35,7 +36,7 @@ def chdir_tmp_path(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def make_tree(tmp_path: Path):
+def make_tree(tmp_path: Path) -> Callable[..., Path]:
     """Factory to create a file tree under ``tmp_path``.
 
     Example:

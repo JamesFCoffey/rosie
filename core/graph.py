@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 try:
-    import structlog  # type: ignore
+    import structlog
 
     logger = structlog.get_logger(__name__)
 except Exception:  # pragma: no cover - fallback when structlog is unavailable
@@ -25,6 +25,7 @@ from agents.executor_agent import ExecutorAgent
 from projections.base import replay
 from projections.plan_view import PlanItem, PlanProjection, PlanView
 from schemas import events as ev
+from schemas.rules import RuleSet
 from storage.event_store import EventStore
 from tools import clustering, file_scanner, rule_engine
 from tools import dev_clean as dev_clean_tool
@@ -105,7 +106,7 @@ class Orchestrator:
         self._lock = asyncio.Lock()
         self._stop = asyncio.Event()
         # Default: no rules; tests/CLI can inject via set_rules
-        self._rules = None
+        self._rules: RuleSet | None = None
         # Plan projection state: keep a rolling materialized view and cursor
         self._plan = PlanProjection()
         self._plan_last_id = 0
@@ -114,7 +115,7 @@ class Orchestrator:
     # Public configuration helpers
     # -----------------------------
 
-    def set_rules(self, rules: schemas.rules.RuleSet | None) -> None:  # noqa: F821
+    def set_rules(self, rules: RuleSet | None) -> None:
         """Attach a ruleset for the rule engine.
 
         Args:

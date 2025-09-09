@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 from schemas import events as ev
 
 
-def _round_trip(model):
+def _round_trip(model: Any) -> None:
     data = model.to_json()
     cls = model.__class__
     again = cls.from_json(data)

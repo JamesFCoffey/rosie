@@ -12,6 +12,8 @@ def _rule_matched_event(path: Path) -> EventRecord:
         ts=0,
         type="RuleMatched",
         data={"path": str(path), "rule_id": "R1"},
+        checksum="",
+        schema_ver=1,
     )
 
 

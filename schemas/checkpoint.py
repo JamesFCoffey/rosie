@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TypeVar
 
 from pydantic import BaseModel
+
+T = TypeVar("T", bound="_JsonMixin")
 
 
 class _JsonMixin(BaseModel):
@@ -12,7 +15,7 @@ class _JsonMixin(BaseModel):
         return self.model_dump_json()
 
     @classmethod
-    def from_json(cls, data: str):  # type: ignore[override]
+    def from_json(cls: type[T], data: str) -> T:
         return cls.model_validate_json(data)
 
 

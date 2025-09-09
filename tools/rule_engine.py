@@ -236,8 +236,8 @@ def load_rules_from_yaml(path: Path) -> RuleSet:
         data = _parse_json()
     else:
         try:
-            import yaml  # type: ignore
-
+            # Use dynamic import via builtins to respect patched import hooks in tests
+            yaml = __import__("yaml")
             data = yaml.safe_load(text) or {}
             if not isinstance(data, dict):
                 raise TypeError("Rules YAML must be a mapping at top-level")

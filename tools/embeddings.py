@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Protocol
 
 try:
-    from blake3 import blake3 as _blake3  # type: ignore
+    from blake3 import blake3 as _blake3
 
     def _hash_bytes(data: bytes) -> bytes:
         return _blake3(data).digest()
@@ -22,7 +22,7 @@ try:
 except Exception:  # pragma: no cover - fallback when blake3 unavailable
     import hashlib
 
-    def _hash_bytes(data: bytes) -> bytes:  # type: ignore[no-redef]
+    def _hash_bytes(data: bytes) -> bytes:
         return hashlib.sha256(data).digest()
 
 
