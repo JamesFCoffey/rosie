@@ -67,7 +67,17 @@ def send_to_recycle_bin(p: Path) -> None:
         op.hNameMappings = None
         op.lpszProgressTitle = None
 
-        res = ctypes.windll.shell32.SHFileOperationW(ctypes.byref(op))  # type: ignore[attr-defined]
+        # Access via getattr to satisfy static typing on non-Windows platforms.
+        shell32 = getattr(ctypes, "windll", None)
+        if shell32 is None:
+            return None
+        api = getattr(shell32, "shell32", None)
+        if api is None:
+            return None
+        shfileop = getattr(api, "SHFileOperationW", None)
+        if shfileop is None:
+            return None
+        res = shfileop(ctypes.byref(op))
         # Non-zero indicates failure; we intentionally do not delete as a
         # fallback to preserve safety.
         if res != 0:

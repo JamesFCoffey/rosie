@@ -242,9 +242,13 @@ def load_rules_from_yaml(path: Path) -> RuleSet:
             if not isinstance(data, dict):
                 raise TypeError("Rules YAML must be a mapping at top-level")
         except ModuleNotFoundError as e:
-            raise RuntimeError(
-                "PyYAML is not installed. Install 'pyyaml' or provide a .json rules file."
-            ) from e
+            # If YAML is unavailable but content looks like JSON, fall back gracefully
+            if looks_json:
+                data = _parse_json()
+            else:
+                raise RuntimeError(
+                    "PyYAML is not installed. Install 'pyyaml' or provide a .json rules file."
+                ) from e
         except Exception:
             # As a last resort, if content actually looks like JSON, try it
             if looks_json:
