@@ -12,6 +12,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
+# Constants from shellapi.h (safe to define at import time)
+FO_DELETE = 3
+FOF_SILENT = 0x0004
+FOF_NOCONFIRMATION = 0x0010
+FOF_ALLOWUNDO = 0x0040
+
 
 def _is_windows() -> bool:
     import os
@@ -37,12 +43,6 @@ def send_to_recycle_bin(p: Path) -> None:
         import ctypes
         from ctypes import wintypes
 
-        # Constants from shellapi.h
-        FO_DELETE = 3
-        FOF_SILENT = 0x0004
-        FOF_NOCONFIRMATION = 0x0010
-        FOF_ALLOWUNDO = 0x0040
-
         class SHFILEOPSTRUCTW(ctypes.Structure):
             _fields_ = [
                 ("hwnd", wintypes.HWND),
@@ -54,8 +54,6 @@ def send_to_recycle_bin(p: Path) -> None:
                 ("hNameMappings", wintypes.LPVOID),
                 ("lpszProgressTitle", wintypes.LPCWSTR),
             ]
-
-        SHFileOperationW = ctypes.windll.shell32.SHFileOperationW  # type: ignore[attr-defined]
 
         # Build double-null-terminated source list
         src = str(Path(p)) + "\x00\x00"
@@ -69,7 +67,7 @@ def send_to_recycle_bin(p: Path) -> None:
         op.hNameMappings = None
         op.lpszProgressTitle = None
 
-        res = SHFileOperationW(ctypes.byref(op))
+        res = ctypes.windll.shell32.SHFileOperationW(ctypes.byref(op))  # type: ignore[attr-defined]
         # Non-zero indicates failure; we intentionally do not delete as a
         # fallback to preserve safety.
         if res != 0:

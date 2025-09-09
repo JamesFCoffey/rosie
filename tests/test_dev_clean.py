@@ -46,7 +46,7 @@ def _make_dev_tree(root: Path) -> list[Path]:
 def test_dev_clean_cli_dry_run_lists_caches(tmp_path: Path) -> None:
     root = tmp_path / "proj"
     root.mkdir()
-    created = _make_dev_tree(root)
+    _make_dev_tree(root)
 
     res = runner.invoke(app, ["dev-clean", str(root)])
     assert res.exit_code == 0
@@ -76,4 +76,3 @@ def test_dev_clean_cli_apply_deletes_on_non_windows(tmp_path: Path) -> None:
     if os.name != "nt":
         for p in created:
             assert not p.exists()
-

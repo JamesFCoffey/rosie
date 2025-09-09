@@ -123,7 +123,6 @@ def _read_preview_text(path: Path, *, max_bytes: int) -> str:
 
 def _file_content_hash(path: Path, *, chunk_size: int = 64 * 1024) -> str:
     """Compute a stable hex digest of file content."""
-    h = bytearray()
     # Use streaming hashing; avoid loading large files entirely
     # Accumulate blake3 (or sha256) digest result at the end
     hasher_state: list[bytes] = []
@@ -202,4 +201,3 @@ def embed_files(
         pass
 
     return new_count
-

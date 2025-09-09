@@ -94,7 +94,7 @@ def _try_hdbscan(vectors: Sequence[Sequence[float]], *, min_cluster_size: int = 
         # probabilities_ aligns with labels
         probs = getattr(clusterer, "probabilities_", None)
         if probs is None:
-            probs = [1.0 if int(l) != -1 else 0.0 for l in labels]
+            probs = [1.0 if int(lbl) != -1 else 0.0 for lbl in labels]
         return list(map(int, labels)), [float(p) for p in probs]
     except Exception:
         return None
@@ -146,7 +146,7 @@ def _fallback_threshold(vectors: Sequence[Sequence[float]], *, sim_threshold: fl
             labels[i] = -1
         else:
             current_label += 1
-    probs = [1.0 if l != -1 else 0.0 for l in labels]
+    probs = [1.0 if label != -1 else 0.0 for label in labels]
     return labels, probs
 
 
@@ -183,7 +183,7 @@ def cluster_vectors(
     result = _try_hdbscan(vectors, min_cluster_size=min_cluster_size)
     if result is not None:
         labels, probs = result
-        if not any(l != -1 for l in labels):
+        if not any(label != -1 for label in labels):
             result = None  # force fallback if all noise
     if result is None:
         result = _try_agglomerative(vectors)

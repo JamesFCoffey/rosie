@@ -10,7 +10,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
 
 from storage.event_store import EventRecord
 
@@ -71,8 +70,8 @@ class FileIndex:
             if p not in self.entries:
                 self.entries[p] = FileMeta(
                     path=p,
-                    size=cast(Optional[int], 0),
-                    mtime=cast(Optional[float], 0.0),
+                    size=0,
+                    mtime=0.0,
                     is_dir=p.is_dir(),
                 )
 
@@ -94,7 +93,7 @@ class FileIndex:
                 break
             cur = cur.parent
 
-    def largest_folders(self, *, limit: int = 20) -> List[tuple[Path, int]]:
+    def largest_folders(self, *, limit: int = 20) -> list[tuple[Path, int]]:
         """Return top-N folders by aggregated size.
 
         Args:
@@ -105,7 +104,3 @@ class FileIndex:
         """
         items = sorted(self.folder_sizes.items(), key=lambda kv: kv[1], reverse=True)
         return items[: max(0, limit)]
-
-
-def cast(type_, value):  # small internal helper to avoid importing typing.cast
-    return value
