@@ -28,6 +28,9 @@ from storage.event_store import EventStore
 from tools import dev_clean as dev_clean_tool
 from tools import file_scanner
 from tools import rule_engine, clustering
+from agents.executor_agent import ExecutorAgent
+from projections.plan_view import PlanProjection
+from projections.base import replay
 
 # logger defined above (structlog or stdlib logging)
 
@@ -181,20 +184,74 @@ class Orchestrator:
     def apply(self, *, plan_path: Optional[Path], checkpoint_path: Optional[Path]) -> ApplyResult:
         """Apply an approved plan.
 
-        Stub implementation only logs intent and returns summary.
+        Execution requires a PlanFinalized event. If ``plan_path`` is provided,
+        it is treated as an explicit user-approved plan and a PlanFinalized
+        event is emitted for that plan id prior to execution.
         """
-        msg = "Apply called (stub). No changes made."
-        logger.info("apply_called", plan_path=str(plan_path) if plan_path else None)
-        return ApplyResult(summary=msg)
+        # Materialize current plan view from events by default
+        proj = PlanProjection()
+        replay(proj, self.events)
+        current = proj.current_plan()
+
+        # Decide plan source for execution
+        if plan_path is not None:
+            # Treat as explicit approval and emit PlanFinalized
+            try:
+                import json as _json
+                data = _json.loads(Path(plan_path).read_text())
+                # Minimal validation of schema
+                plan_id = str(data.get("id"))
+                item_ids = [str(it.get("id")) for it in (data.get("items") or [])]
+                if plan_id:
+                    self.events.append(ev.PlanFinalized(plan_id=plan_id, approved_item_ids=item_ids))
+                # Use a lightweight PlanView for execution
+                from projections.plan_view import PlanView, PlanItem
+
+                items = [
+                    PlanItem(
+                        id=str(it.get("id")),
+                        action=str(it.get("action")),
+                        target=Path(it.get("target")),
+                        reason=str(it.get("reason")),
+                        confidence=float(it.get("confidence", 1.0)),
+                    )
+                    for it in (data.get("items") or [])
+                ]
+                plan_view = PlanView(items=items)
+            except Exception as e:
+                return ApplyResult(summary=f"Failed to load plan: {e}")
+        else:
+            # Ensure we have an approval for current plan id
+            approved = False
+            for rec in self.events.read_all():
+                if rec.type == "PlanFinalized" and str(rec.data.get("plan_id")) == current.id:
+                    approved = True
+            if not approved:
+                return ApplyResult(summary="Plan not finalized; approval required before apply")
+            # Build a PlanView from current PlanProjection items
+            from projections.plan_view import PlanItem, PlanView
+
+            items = [
+                PlanItem(
+                    id=it.id,
+                    action=it.action,
+                    target=it.target,
+                    reason=it.reason,
+                    confidence=it.confidence,
+                )
+                for it in current.items
+            ]
+            plan_view = PlanView(items=items)
+
+        exec_agent = ExecutorAgent(self.events)
+        result = exec_agent.apply(plan_view, checkpoint_path=checkpoint_path)
+        return ApplyResult(summary=result.summary)
 
     def undo(self, *, checkpoint_path: Path) -> UndoResult:
-        """Undo a checkpointed apply.
-
-        Stub implementation returns summary only.
-        """
-        msg = f"Undo called for {checkpoint_path} (stub)."
-        logger.info("undo_called", checkpoint_path=str(checkpoint_path))
-        return UndoResult(summary=msg)
+        """Undo a checkpointed apply using the executor agent."""
+        exec_agent = ExecutorAgent(self.events)
+        result = exec_agent.undo(checkpoint_path=checkpoint_path)
+        return UndoResult(summary=result.summary)
 
     def dev_clean(self, *, path: Path, preset: str, dry_run: bool) -> DevCleanReport:
         """List and optionally remove common dev caches.
