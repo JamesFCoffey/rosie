@@ -17,6 +17,12 @@ from schemas.checkpoint import Checkpoint, CheckpointAction
 from storage.event_store import EventStore
 from tools import checkpoint as ck
 from tools import file_ops
+from os_win.onedrive import is_onedrive_path
+
+
+# Conservative defaults; tests can override via parameters to apply().
+MAX_ACTIONS_DEFAULT = 1000
+MAX_TOTAL_MOVE_BYTES_DEFAULT = 10 * 1024 * 1024 * 1024  # 10 GiB
 
 
 @dataclass
@@ -49,12 +55,76 @@ class ExecutorAgent:
                 return Path(tail)
         return None
 
-    def apply(self, plan: PlanView, *, checkpoint_path: Path | None) -> ExecutionResult:
+    def apply(
+        self,
+        plan: PlanView,
+        *,
+        checkpoint_path: Path | None,
+        max_actions: int | None = None,
+        max_total_move_bytes: int | None = None,
+        force: bool = False,
+    ) -> ExecutionResult:
         # Materialize deterministic plan id for ApplyStarted event
         proj = PlanProjection()
         replay(proj, self.store)
         current = proj.current_plan()
         self.store.append(ev.ApplyStarted(plan_id=current.id))
+
+        # Safety: refuse if too many actions in one run
+        lim_actions = max_actions if max_actions is not None else MAX_ACTIONS_DEFAULT
+        if len(plan.items) > lim_actions:
+            return ExecutionResult(applied=0, skipped=len(plan.items), summary=f"refused: too_many_actions>{lim_actions}")
+
+        # Safety: OneDrive guard (unless forced). If any move targets or sources
+        # an OneDrive path, refuse by default to avoid sync/placeholder issues.
+        for it in plan.items:
+            try:
+                if it.action == "move":
+                    src = self._infer_move_src(it.reason)
+                    dst = Path(it.target)
+                    if (src and is_onedrive_path(src)) or is_onedrive_path(dst):
+                        if not force:
+                            return ExecutionResult(
+                                applied=0,
+                                skipped=len(plan.items),
+                                summary="refused: onedrive_guard (use --force to override)",
+                            )
+            except Exception:
+                # If detection fails, do not block; executor handles errors per item
+                continue
+
+        # Safety: total move size threshold
+        lim_move = max_total_move_bytes if max_total_move_bytes is not None else MAX_TOTAL_MOVE_BYTES_DEFAULT
+        if lim_move >= 0:
+            total_bytes = 0
+            for it in plan.items:
+                if it.action != "move":
+                    continue
+                src = self._infer_move_src(it.reason)
+                if src is None:
+                    continue
+                try:
+                    p = Path(src)
+                    if p.is_file():
+                        total_bytes += int(p.stat().st_size)
+                    elif p.is_dir():
+                        # Best-effort: sum file sizes; may be approximate
+                        import os as _os
+
+                        for dp, _dn, files in _os.walk(p):
+                            for fn in files:
+                                try:
+                                    total_bytes += int(Path(dp, fn).stat().st_size)
+                                except Exception:
+                                    continue
+                except Exception:
+                    continue
+            if total_bytes > lim_move:
+                return ExecutionResult(
+                    applied=0,
+                    skipped=len(plan.items),
+                    summary=f"refused: move_size>{lim_move}",
+                )
 
         # Resolve checkpoint path and initialize journal
         ck_path = checkpoint_path or ck.new_checkpoint_path(current.id)

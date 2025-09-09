@@ -181,7 +181,15 @@ class Orchestrator:
         )
         return PlanView(items=[item])
 
-    def apply(self, *, plan_path: Optional[Path], checkpoint_path: Optional[Path]) -> ApplyResult:
+    def apply(
+        self,
+        *,
+        plan_path: Optional[Path],
+        checkpoint_path: Optional[Path],
+        force: bool = False,
+        max_actions: int | None = None,
+        max_total_move_bytes: int | None = None,
+    ) -> ApplyResult:
         """Apply an approved plan.
 
         Execution requires a PlanFinalized event. If ``plan_path`` is provided,
@@ -244,7 +252,13 @@ class Orchestrator:
             plan_view = PlanView(items=items)
 
         exec_agent = ExecutorAgent(self.events)
-        result = exec_agent.apply(plan_view, checkpoint_path=checkpoint_path)
+        result = exec_agent.apply(
+            plan_view,
+            checkpoint_path=checkpoint_path,
+            max_actions=max_actions,
+            max_total_move_bytes=max_total_move_bytes,
+            force=force,
+        )
         return ApplyResult(summary=result.summary)
 
     def undo(self, *, checkpoint_path: Path) -> UndoResult:

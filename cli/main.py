@@ -113,6 +113,7 @@ def apply(
     plan: Optional[Path] = typer.Option(None, "--plan", help="Plan JSON to apply"),
     checkpoint: Optional[Path] = typer.Option(None, "--checkpoint", help="Checkpoint output path"),
     yes: bool = typer.Option(False, "--yes", help="Confirm execution; otherwise dry-run only"),
+    force: bool = typer.Option(False, "--force", help="Override OneDrive guard for moves"),
     db: Optional[Path] = typer.Option(None, "--db", help="Path to event store DB"),
 ):
     """Apply an approved plan using Windows-safe operations.
@@ -124,7 +125,7 @@ def apply(
         raise typer.Exit(code=2)
 
     orchestrator = Orchestrator(db_path=db or default_db_path())
-    result = orchestrator.apply(plan_path=plan, checkpoint_path=checkpoint)
+    result = orchestrator.apply(plan_path=plan, checkpoint_path=checkpoint, force=force)
     console.log(f"Apply result: {result.summary}")
 
 

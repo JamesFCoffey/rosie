@@ -56,12 +56,38 @@ def _matches_any(p: Path, patterns: Sequence[str]) -> bool:
     return False
 
 
+_FILE_ATTRIBUTE_HIDDEN = 0x2
+_FILE_ATTRIBUTE_SYSTEM = 0x4
+
+
+def _is_hidden_or_system(p: Path) -> bool:
+    """Return True if path is hidden or system.
+
+    On Windows, checks file attributes via ``os.lstat``. On non-Windows,
+    treats names starting with a dot as hidden. Errors are treated as not hidden
+    to avoid over-filtering due to transient failures.
+    """
+    try:
+        import os as _os
+
+        st = _os.lstat(p)
+        attrs = getattr(st, "st_file_attributes", None)
+        if attrs is not None:
+            return bool(attrs & (_FILE_ATTRIBUTE_HIDDEN | _FILE_ATTRIBUTE_SYSTEM))
+    except Exception:
+        # Fall through to name-based heuristic
+        pass
+    name = p.name
+    return name.startswith(".")
+
+
 def _iter_entries(
     *,
     root: Path,
     include: Sequence[str],
     exclude: Sequence[str],
     deny_dirs: set[str],
+    exclude_hidden: bool = True,
 ) -> Iterable[ScannedItem]:
     """Synchronous walker yielding ``ScannedItem`` entries.
 
@@ -94,7 +120,9 @@ def _iter_entries(
                 st = os.lstat(dpath)
             except Exception:
                 st = None
-            yield ScannedItem(path=dpath, size=0, mtime=(st.st_mtime if st else 0.0), is_dir=True)
+            # Skip hidden/system directories by default
+            if not (exclude_hidden and _is_hidden_or_system(dpath)):
+                yield ScannedItem(path=dpath, size=0, mtime=(st.st_mtime if st else 0.0), is_dir=True)
 
         # Yield files in this directory
         for fname in filenames:
@@ -110,6 +138,9 @@ def _iter_entries(
                 st = os.lstat(fp)
             except Exception:
                 continue
+            # Skip hidden/system files by default
+            if exclude_hidden and _is_hidden_or_system(fp):
+                continue
             yield ScannedItem(path=fp, size=int(getattr(st, "st_size", 0)), mtime=float(st.st_mtime), is_dir=False)
 
 
@@ -120,6 +151,7 @@ async def scan_and_emit(
     include: Optional[Sequence[str]] = None,
     exclude: Optional[Sequence[str]] = None,
     deny_dirs: Optional[set[str]] = None,
+    exclude_hidden: bool = True,
     batch_size: int = 512,
 ) -> int:
     """Scan ``root`` and append ``FilesScanned`` events in batches.
@@ -170,7 +202,9 @@ async def scan_and_emit(
     loop = asyncio.get_running_loop()
 
     def _produce() -> None:
-        for item in _iter_entries(root=root, include=inc, exclude=exc, deny_dirs=denies):
+        for item in _iter_entries(
+            root=root, include=inc, exclude=exc, deny_dirs=denies, exclude_hidden=exclude_hidden
+        ):
             batch.append({
                 "path": item.path,
                 "size": item.size,
@@ -190,4 +224,9 @@ def scan_paths(*, root: Path, include: List[str], exclude: List[str]) -> Iterabl
 
     Yields files and directories under root honoring basic include/exclude globs.
     """
-    yield from (it.path for it in _iter_entries(root=root, include=include, exclude=exclude, deny_dirs=DENY_DIR_NAMES))
+    yield from (
+        it.path
+        for it in _iter_entries(
+            root=root, include=include, exclude=exclude, deny_dirs=DENY_DIR_NAMES, exclude_hidden=True
+        )
+    )
