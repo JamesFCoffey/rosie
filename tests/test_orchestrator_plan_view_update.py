@@ -26,10 +26,12 @@ def test_plan_updates_and_hash_changes_on_correction(tmp_path: Path) -> None:
     _touch(a)
     _touch(b)
 
-    rules = RuleSet(rules=[
-        Rule(id="R1", name="txt", include=["*.txt"], exclude=[]),
-        Rule(id="R2", name="log", include=["*.log"], exclude=[]),
-    ])
+    rules = RuleSet(
+        rules=[
+            Rule(id="R1", name="txt", include=["*.txt"], exclude=[]),
+            Rule(id="R2", name="log", include=["*.log"], exclude=[]),
+        ]
+    )
 
     store = EventStore(_db_path(tmp_path))
     orch = Orchestrator(db_path=_db_path(tmp_path))
@@ -60,4 +62,3 @@ def test_plan_updates_and_hash_changes_on_correction(tmp_path: Path) -> None:
         assert stats.cluster_paths_evaluated == 1
     finally:
         store.close()
-

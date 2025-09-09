@@ -77,4 +77,3 @@ def long_path(tmp_path: Path) -> tuple[Path, Path]:
     tail = "nested" * 40
     p = tmp_path / tail / "file.txt"
     return tmp_path, p
-

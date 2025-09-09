@@ -1,2 +1,1 @@
 """Domain schemas package."""
-

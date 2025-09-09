@@ -27,10 +27,12 @@ def test_incremental_invalidation_scoped(tmp_path: Path) -> None:
     _touch(a)
     _touch(b)
 
-    rules = RuleSet(rules=[
-        Rule(id="R1", name="txt", include=["*.txt"], exclude=[]),
-        Rule(id="R2", name="log", include=["*.log"], exclude=[]),
-    ])
+    rules = RuleSet(
+        rules=[
+            Rule(id="R1", name="txt", include=["*.txt"], exclude=[]),
+            Rule(id="R2", name="log", include=["*.log"], exclude=[]),
+        ]
+    )
 
     store = EventStore(_db_path(tmp_path))
     orch = Orchestrator(db_path=_db_path(tmp_path))
@@ -71,10 +73,12 @@ def test_incremental_invalidation_global(tmp_path: Path) -> None:
     ws.mkdir(parents=True, exist_ok=True)
     (ws / "f1.txt").write_text("x")
     (ws / "f2.log").write_text("y")
-    rules = RuleSet(rules=[
-        Rule(id="R1", name="txt", include=["*.txt"], exclude=[]),
-        Rule(id="R2", name="log", include=["*.log"], exclude=[]),
-    ])
+    rules = RuleSet(
+        rules=[
+            Rule(id="R1", name="txt", include=["*.txt"], exclude=[]),
+            Rule(id="R2", name="log", include=["*.log"], exclude=[]),
+        ]
+    )
     store = EventStore(_db_path(tmp_path))
     orch = Orchestrator(db_path=_db_path(tmp_path))
     orch.set_rules(rules)

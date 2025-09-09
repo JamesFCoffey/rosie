@@ -61,4 +61,3 @@ def test_hdbscan_with_fallback_and_event(tmp_path: Path) -> None:
         assert plan.id and isinstance(plan.id, str)
     finally:
         store.close()
-

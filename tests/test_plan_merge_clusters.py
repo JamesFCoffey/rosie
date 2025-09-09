@@ -48,4 +48,3 @@ def test_plan_merges_cluster_create_and_move(tmp_path: Path) -> None:
         assert (ws / "docs" / f3.name) not in set(move_targets)
     finally:
         store.close()
-

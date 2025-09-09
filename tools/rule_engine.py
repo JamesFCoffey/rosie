@@ -24,6 +24,7 @@ from storage.event_store import EventStore
 # Matching helpers and scoring
 # ----------------------------
 
+
 def _norm_ext(ext: str) -> str:
     e = ext.lower().strip()
     if not e:
@@ -206,6 +207,7 @@ def emit_rule_matches(paths: Iterable[Path], rules: RuleSet, store: EventStore) 
 # -------------
 # YAML loading
 # -------------
+
 
 def load_rules_from_yaml(path: Path) -> RuleSet:
     """Load rules from YAML or JSON with clear error handling.

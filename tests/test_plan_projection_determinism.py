@@ -68,4 +68,3 @@ def test_correction_bumps_plan_hash(tmp_path: Path) -> None:
         assert plan_after.id == proj_after2.current_plan().id
     finally:
         store.close()
-

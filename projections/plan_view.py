@@ -120,9 +120,7 @@ class PlanProjection:
                     )
                 # Moves for members
                 # Average confidence for cluster used only for moves lacking explicit conf
-                avg_conf = (
-                    sum(c for (_p, c, _l) in buckets[cid]) / max(1, len(buckets[cid]))
-                )
+                avg_conf = sum(c for (_p, c, _l) in buckets[cid]) / max(1, len(buckets[cid]))
                 for src, dst in moves:
                     reason = f"cluster:{label} from {src.name}"
                     action = "move"

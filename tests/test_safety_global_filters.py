@@ -46,4 +46,3 @@ def test_hidden_files_excluded_by_default(tmp_path: Path) -> None:
             assert ".secret" not in str(it.target)
     finally:
         store.close()
-

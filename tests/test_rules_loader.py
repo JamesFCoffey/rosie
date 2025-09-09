@@ -48,4 +48,3 @@ rules:
     with pytest.raises(RuntimeError) as ei:
         load_rules_from_yaml(yf)
     assert "PyYAML is not installed" in str(ei.value)
-

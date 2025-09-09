@@ -40,9 +40,7 @@ def test_scanner_emits_batches_and_index_aggregates(tmp_path: Path) -> None:
     store = EventStore(_db_path(tmp_path))
     try:
         # Emit scan in small batches to force multiple events
-        total = asyncio.run(
-            file_scanner.scan_and_emit(root=ws, store=store, batch_size=2)
-        )
+        total = asyncio.run(file_scanner.scan_and_emit(root=ws, store=store, batch_size=2))
         rows = store.read_all()
         # Only FilesScanned events are expected here
         assert all(r.type == "FilesScanned" for r in rows)
@@ -60,4 +58,3 @@ def test_scanner_emits_batches_and_index_aggregates(tmp_path: Path) -> None:
         assert top.get(ws) in {30, 30 + 0}  # exact value depends on where root counting stops
     finally:
         store.close()
-

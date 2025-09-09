@@ -32,6 +32,7 @@ except Exception:  # pragma: no cover - fallback
                 h.update(chunk)
         return h.hexdigest()
 
+
 from os_win.recycle_bin import send_to_recycle_bin
 
 
@@ -91,6 +92,7 @@ def copy_verify_delete(src: Path, dst: Path) -> tuple[bool, str]:
     try:
         if src.is_dir():
             shutil.copytree(src, dst, dirs_exist_ok=True)
+
             # Best-effort: compare file counts
             def count_files(p: Path) -> int:
                 c = 0
@@ -125,4 +127,3 @@ __all__ = [
     "recycle_delete",
     "ensure_parent",
 ]
-

@@ -25,4 +25,3 @@ def test_fallback_when_hdbscan_all_noise(monkeypatch, tmp_path: Path) -> None:
     cids = [it.cluster_id for it in items]
     # Ensure fallback produced at least one non-noise assignment
     assert any(cid != -1 for cid in cids)
-

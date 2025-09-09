@@ -31,4 +31,3 @@ def replay(projection: AppliesEvent, store: EventStore, since_id: int = 0) -> in
         projection.apply(ev)
         last = ev.id
     return last
-

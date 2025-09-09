@@ -11,4 +11,3 @@ T = TypeVar("T")
 def resolve(items: Iterable[T]) -> list[T]:
     # Stub: return as-is
     return list(items)
-

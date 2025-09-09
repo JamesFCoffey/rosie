@@ -171,4 +171,3 @@ def run_review(
         result.corrections.append(f"note:{raw}")
 
     return result
-

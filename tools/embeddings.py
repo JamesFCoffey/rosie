@@ -25,6 +25,7 @@ except Exception:  # pragma: no cover - fallback when blake3 unavailable
     def _hash_bytes(data: bytes) -> bytes:  # type: ignore[no-redef]
         return hashlib.sha256(data).digest()
 
+
 from projections.embed_cache import EmbeddingCache
 from schemas import events as ev
 from storage.event_store import EventStore

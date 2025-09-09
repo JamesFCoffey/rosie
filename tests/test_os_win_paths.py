@@ -26,11 +26,10 @@ def test_get_known_folder_common() -> None:
 def test_to_long_path_prefix(tmp_path: Path) -> None:
     # Build a long-ish path textually (no need to create on disk)
     long_tail = "nested" * 40
-    p = (tmp_path / long_tail)
+    p = tmp_path / long_tail
     lp = to_long_path(p)
     if sys.platform == "win32":
         s = str(lp)
         assert s.startswith("\\\\?\\") or s.startswith("\\\\?\\UNC\\")
     else:
         assert lp == p
-

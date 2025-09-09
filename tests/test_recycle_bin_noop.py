@@ -15,4 +15,3 @@ def test_send_to_recycle_bin_is_noop_on_non_windows(tmp_path: Path) -> None:
 
     if os.name != "nt":
         assert p.exists()
-

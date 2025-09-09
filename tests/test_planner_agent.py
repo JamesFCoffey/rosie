@@ -89,4 +89,3 @@ def test_planner_with_semantic_emits_clusters(tmp_path: Path) -> None:
         assert types[-1] == "PlanProposed"
     finally:
         store.close()
-

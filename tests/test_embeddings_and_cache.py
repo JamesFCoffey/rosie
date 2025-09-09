@@ -75,4 +75,3 @@ def test_embeddings_compute_and_cache(tmp_path: Path) -> None:
         assert v2 is not None and len(v2) == 3
     finally:
         store.close()
-

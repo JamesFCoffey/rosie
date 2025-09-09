@@ -104,4 +104,3 @@ def test_yaml_loader_and_event_emission(tmp_path: Path) -> None:
         assert actions == ["rule:Rimg", "rule:Rtxt"]
     finally:
         store.close()
-

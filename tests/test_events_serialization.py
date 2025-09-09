@@ -25,4 +25,3 @@ def test_events_round_trip(tmp_path: Path) -> None:
     _round_trip(ev.ApplyStarted(plan_id="p1"))
     _round_trip(ev.ActionApplied(item_id="i1", status="ok", message=None))
     _round_trip(ev.UndoPerformed(checkpoint_path=tmp_path / "ckpt.json"))
-

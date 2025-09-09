@@ -88,4 +88,3 @@ def shape_cluster_moves(
         dirs.append(sub)
         moves.extend((q, sub / q.name) for q in chunk)
     return dirs, moves
-

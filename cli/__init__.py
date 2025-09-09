@@ -2,4 +2,3 @@
 
 Exposes the Typer entrypoint in `cli.main`.
 """
-

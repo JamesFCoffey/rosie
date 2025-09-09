@@ -25,4 +25,3 @@ def test_import_core_packages_importable():
     import tools.file_scanner  # noqa: F401
     import tools.rule_engine  # noqa: F401
     import tools.tree_shaper  # noqa: F401
-

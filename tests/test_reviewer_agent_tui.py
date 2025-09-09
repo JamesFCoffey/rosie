@@ -56,7 +56,7 @@ def test_tui_commands_map_to_events(tmp_path: Path) -> None:
             f"split {id1} into sub-actions",
             f"merge {id1},{id2} consolidate",
             "exclude **/.cache/**",
-            "rule {\"id\": \"Inline\", \"globs\": [\"*.tmp\"]}",
+            'rule {"id": "Inline", "globs": ["*.tmp"]}',
         ]
 
         result = reviewer.review(view, commands=cmds)
@@ -83,4 +83,3 @@ def test_tui_commands_map_to_events(tmp_path: Path) -> None:
         assert any(n.startswith("rule:") for n in corr_notes)
     finally:
         store.close()
-

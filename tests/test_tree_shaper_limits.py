@@ -28,4 +28,3 @@ def test_shape_cluster_moves_max_children(tmp_path: Path) -> None:
     assert len(targets) == len(members)
     # All targets reside under the created subfolders
     assert all(str(t).startswith(str(root / s)) for t in targets)
-
