@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field
 
 from schemas.plan import PlanItemModel, PlanModel
 from storage.event_store import EventRecord, compute_checksum
+from tools import conflict_resolver
 from tools.tree_shaper import shape_cluster_moves
 
 
@@ -130,7 +131,8 @@ class PlanProjection:
                 # Average confidence for cluster used only for moves lacking explicit conf
                 avg_conf = sum(c for (_p, c, _l) in buckets[cid]) / max(1, len(buckets[cid]))
                 for src, dst in moves:
-                    reason = f"cluster:{label} from {src.name}"
+                    # Encode source path for downstream tools (executor/resolver)
+                    reason = f"cluster:{label} src={src}"
                     action = "move"
                     conf = next((c for (p, c, _l) in buckets[cid] if p == src), avg_conf)
                     item_id = self._compute_item_id(action=action, target=dst, reason=reason)
@@ -144,7 +146,23 @@ class PlanProjection:
 
     def current_plan(self) -> PlanModel:
         """Return the current deterministic plan with a stable id."""
-        items = sorted(self.items.values(), key=lambda x: x.id)
+        # Resolve conflicts and annotate risks before emission
+        raw = list(self.items.values())
+        resolved = conflict_resolver.resolve(raw, root=(self.root or Path(".")))
+        # Recompute content-addressed ids after resolution
+        finalized: list[PlanItemModel] = []
+        for it in resolved:
+            nid = self._compute_item_id(action=it.action, target=it.target, reason=it.reason)
+            finalized.append(
+                PlanItemModel(
+                    id=nid,
+                    action=it.action,
+                    target=it.target,
+                    reason=it.reason,
+                    confidence=it.confidence,
+                )
+            )
+        items = sorted(finalized, key=lambda x: x.id)
         pid = self._compute_plan_id(items=items)
         return PlanModel(id=pid, items=items)
 
