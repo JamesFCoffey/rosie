@@ -58,6 +58,8 @@ class PlannerAgent:
         root: Path,
         semantic: bool = False,
         rules_path: Path | None = None,
+        max_depth: int | None = None,
+        max_children: int | None = None,
     ) -> PlanView:
         """Run rule matching and optional clustering, then emit PlanProposed.
 
@@ -107,7 +109,7 @@ class PlannerAgent:
                 pass
 
         # 4) Materialize current plan deterministically and emit PlanProposed
-        proj = PlanProjection()
+        proj = PlanProjection(max_depth=max_depth, max_children=max_children)
         replay(proj, self.store)
         plan = proj.current_plan()
         try:

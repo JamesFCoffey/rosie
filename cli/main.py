@@ -76,10 +76,16 @@ def scan(
     )
     # Then, run the planner over emitted events
     planner = PlannerAgent(orchestrator.events)
-    planner.propose_plan(root=path, semantic=semantic, rules_path=rules)
+    planner.propose_plan(
+        root=path,
+        semantic=semantic,
+        rules_path=rules,
+        max_depth=max_depth,
+        max_children=max_children,
+    )
 
     # Materialize the current deterministic plan for display/export
-    proj = PlanProjection()
+    proj = PlanProjection(max_depth=max_depth, max_children=max_children)
     replay(proj, orchestrator.events)
     plan = proj.current_plan()
 

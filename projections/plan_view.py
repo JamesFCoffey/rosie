@@ -43,6 +43,9 @@ class PlanProjection:
     items: dict[str, PlanItemModel] = field(default_factory=dict)
     correction_gen: int = 0
     root: Path | None = None
+    # Configuration for deterministic shaping/pruning
+    max_depth: int | None = None
+    max_children: int | None = None
 
     def apply(self, event: EventRecord) -> None:
         """Apply a single event to update the plan state."""
@@ -105,7 +108,11 @@ class PlanProjection:
                 # Fallback label if none provided
                 label = labels.get(cid) or f"cluster-{cid}"
                 dirs, moves = shape_cluster_moves(
-                    root=self.root, label=label, members=members, max_depth=2, max_children=None
+                    root=self.root,
+                    label=label,
+                    members=members,
+                    max_depth=(self.max_depth if self.max_depth is not None else 2),
+                    max_children=self.max_children,
                 )
                 # Create directories (explicit create actions)
                 for d in sorted(set(dirs)):
@@ -154,6 +161,10 @@ class PlanProjection:
         payload = {
             "version": 1,
             "correction_gen": self.correction_gen,
+            "limits": {
+                "max_depth": self.max_depth if self.max_depth is not None else 2,
+                "max_children": self.max_children,
+            },
             "items": [
                 {
                     "id": it.id,
